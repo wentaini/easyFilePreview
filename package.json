@@ -1,0 +1,39 @@
+{
+  "name": "easy-file-preview",
+  "version": "1.0.0",
+  "description": "轻量级文件预览组件，支持 PDF、Office、CSV、Markdown 等多格式响应式预览",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "body-parser": "^1.20.2",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "docxtemplater": "^3.63.2",
+    "dotenv": "^17.2.1",
+    "express": "^4.19.2",
+    "express-session": "^1.18.1",
+    "fs": "^0.0.1-security",
+    "marked": "^16.1.1",
+    "minimist": "^1.2.8",
+    "officeparser": "^5.1.1",
+    "pdf-parse": "^1.1.1",
+    "pizzip": "^3.2.0",
+    "pptxgenjs": "^4.0.1",
+    "pptxjs": "^0.0.0",
+    "session-file-store": "^1.5.0",
+    "stream": "^0.0.3",
+    "textract": "^2.5.0",
+    "unzipper": "^0.12.3",
+    "url": "^0.11.3",
+    "uuid": "^11.1.0",
+    "xlsx": "^0.18.5",
+    "xml2js": "^0.6.2",
+    "mammoth": "^1.9.0",
+    "iconv-lite": "^0.6.3"
+  }
+}

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件预览功能演示</title>
+    <script src="./js/tailwindcss.js"></script>
+    <script src="./js/vue.global.js"></script>
+    <link rel="stylesheet" href="./css/common.css">
+    <link rel="stylesheet" href="./css/demo.css">
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <!-- 头部 -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">文件预览功能演示</h1>
+                <p class="text-xl text-gray-600">展示如何使用文件预览功能预览各种格式的文件</p>
+            </div>
+
+            <!-- 功能说明 -->
+            <div class="bg-white rounded-lg shadow-sm border p-8 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">功能特性</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">多格式支持</h3>
+                        <p class="text-gray-600">支持PDF、Excel、CSV、Word、PowerPoint、Markdown、文本、XML等格式</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">响应式设计</h3>
+                        <p class="text-gray-600">完美适配PC、平板、手机等多种设备</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">iframe嵌入</h3>
+                        <p class="text-gray-600">支持通过iframe嵌入到其他页面中使用</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">简洁预览</h3>
+                        <p class="text-gray-600">提供简洁预览模式，只显示文件内容，无额外UI</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">单元格复制</h3>
+                        <p class="text-gray-600">Excel和CSV文件支持点击单元格复制内容到剪贴板</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文件地址生成工具 -->
+            <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">🔧 文件预览地址生成工具</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">文件地址</label>
+                        <input 
+                            v-model="fileUrl" 
+                            type="url" 
+                            placeholder="请输入文件URL，例如: https://example.com/document.pdf"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    
+                    <div class="flex space-x-4">
+                        <button 
+                            @click="generateUrl('full')"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            生成完整预览地址
+                        </button>
+                        <button 
+                            @click="generateUrl('simple')"
+                            class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                            生成简洁预览地址
+                        </button>
+                    </div>
+                    
+                    <div v-if="generatedUrl" class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">生成的预览地址</label>
+                        <div class="flex">
+                            <input 
+                                :value="generatedUrl" 
+                                readonly
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 text-sm"
+                            >
+                            <button 
+                                @click="copyUrl"
+                                class="px-4 py-2 bg-gray-600 text-white rounded-r-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                            >
+                                复制
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div v-if="generatedUrl" class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">iframe嵌入代码</label>
+                        <div class="relative">
+                            <button @click="copyIframeCode" class="copy-button">复制代码</button>
+                            <div class="code-block text-sm">
+&lt;iframe src="{{ generatedUrl }}" width="100%" height="600"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 演示示例 -->
+            <div class="space-y-8">
+                <!-- PDF演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">PDF文档预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的PDF预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('pdf-code')" class="copy-button">复制代码</button>
+                            <div id="pdf-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/dummy.pdf" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/dummy.pdf'" 
+                            width="100%" 
+                            height="400"
+                            title="PDF预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- Excel演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Excel文件预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的Excel预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('excel-code')" class="copy-button">复制代码</button>
+                            <div id="excel-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/excelExp.xlsx" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/excelExp.xlsx'" 
+                            width="100%" 
+                            height="400"
+                            title="Excel预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- CSV演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">CSV文件预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的CSV预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('csv-code')" class="copy-button">复制代码</button>
+                            <div id="csv-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/excelExp.csv" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/excelExp.csv'" 
+                            width="100%" 
+                            height="400"
+                            title="CSV预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- Markdown演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Markdown文件预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的Markdown预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('markdown-code')" class="copy-button">复制代码</button>
+                            <div id="markdown-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/example.md" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/example.md'" 
+                            width="100%" 
+                            height="400"
+                            title="Markdown预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- 文本文件演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">文本文件预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的文本文件预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('text-code')" class="copy-button">复制代码</button>
+                            <div id="text-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/example.txt" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/example.txt'" 
+                            width="100%" 
+                            height="400"
+                            title="文本文件预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- XML演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">XML文件预览演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">以下是通过iframe嵌入的XML预览示例：</p>
+                        <div class="relative">
+                            <button @click="copyCode('xml-code')" class="copy-button">复制代码</button>
+                            <div id="xml-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/example.xml" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreview.html?url=' + baseUrl + '/demoDoc/example.xml'" 
+                            width="100%" 
+                            height="400"
+                            title="XML预览演示">
+                        </iframe>
+                    </div>
+                </div>
+
+                <!-- 简洁预览演示 -->
+                <div class="bg-white rounded-lg shadow-sm border p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">简洁预览模式演示</h3>
+                    <div class="mb-4">
+                        <p class="text-gray-600 mb-2">简洁预览模式只显示文件内容，无额外UI元素，适合嵌入到其他页面中：</p>
+                        <div class="relative">
+                            <button @click="copyCode('simple-code')" class="copy-button">复制代码</button>
+                            <div id="simple-code" class="code-block">
+&lt;iframe src="{{ baseUrl }}/filePreviewSimple.html?url={{ baseUrl }}/demoDoc/dummy.pdf" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                    </div>
+                    <div class="demo-iframe">
+                        <iframe 
+                            :src="baseUrl + '/filePreviewSimple.html?url=' + baseUrl + '/demoDoc/dummy.pdf'" 
+                            width="100%" 
+                            height="400"
+                            title="简洁预览演示">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 使用说明 -->
+            <div class="mt-12 bg-white rounded-lg shadow-sm border p-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">使用方法</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">1. 完整预览模式</h3>
+                        <p class="text-gray-600 mb-2">访问 <code class="bg-gray-100 px-2 py-1 rounded">/filePreview.html</code> 进入完整文件预览页面</p>
+                        <div class="bg-gray-100 p-3 rounded text-sm font-mono">
+                            {{ baseUrl }}/filePreview.html?url=https://example.com/document.pdf
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">2. 简洁预览模式</h3>
+                        <p class="text-gray-600 mb-2">访问 <code class="bg-gray-100 px-2 py-1 rounded">/filePreviewSimple.html</code> 进入简洁预览页面（只显示文件内容）</p>
+                        <div class="bg-gray-100 p-3 rounded text-sm font-mono">
+                            {{ baseUrl }}/filePreviewSimple.html?url=https://example.com/document.pdf
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">3. iframe嵌入使用</h3>
+                        <p class="text-gray-600 mb-2">将以下代码嵌入到您的页面中：</p>
+                        <div class="bg-gray-100 p-3 rounded text-sm font-mono">
+                            &lt;!-- 完整预览模式 --&gt;<br>
+                            &lt;iframe src="{{ baseUrl }}/filePreview.html?url=YOUR_FILE_URL" width="100%" height="600"&gt;&lt;/iframe&gt;<br><br>
+                            &lt;!-- 简洁预览模式 --&gt;<br>
+                            &lt;iframe src="{{ baseUrl }}/filePreviewSimple.html?url=YOUR_FILE_URL" width="100%" height="600"&gt;&lt;/iframe&gt;
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">4. 单元格复制功能</h3>
+                        <p class="text-gray-600 mb-2">Excel和CSV文件支持单元格点击复制功能：</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-1 mb-3">
+                            <li>点击表格中的任意单元格，内容自动复制到剪贴板</li>
+                            <li>支持现代浏览器的Clipboard API</li>
+                            <li>提供降级方案支持旧版浏览器</li>
+                            <li>显示复制成功提示信息</li>
+                            <li>鼠标悬停显示"点击复制"提示</li>
+                        </ul>
+                        <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                            <p class="text-blue-800 text-sm"><strong>💡 提示：</strong>在Excel和CSV预览页面中，将鼠标悬停在单元格上会显示提示，点击即可复制单元格内容。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API接口说明 -->
+            <div class="mt-8 bg-white rounded-lg shadow-sm border p-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">API接口</h2>
+                
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">文件预览接口</h3>
+                        <p class="text-gray-600 mb-2"><code class="bg-gray-100 px-2 py-1 rounded">GET {{ baseUrl }}/api/filePreview/preview?url=文件URL</code></p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">获取文件信息接口</h3>
+                        <p class="text-gray-600 mb-2"><code class="bg-gray-100 px-2 py-1 rounded">GET {{ baseUrl }}/api/filePreview/info?url=文件URL</code></p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">获取支持格式接口</h3>
+                        <p class="text-gray-600 mb-2"><code class="bg-gray-100 px-2 py-1 rounded">GET {{ baseUrl }}/api/filePreview/formats</code></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 支持格式 -->
+            <div class="mt-8 bg-white rounded-lg shadow-sm border p-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">支持的文件格式</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📄</div>
+                        <div class="font-medium">PDF</div>
+                        <div class="text-sm text-gray-500">.pdf</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📊</div>
+                        <div class="font-medium">Excel</div>
+                        <div class="text-sm text-gray-500">.xls, .xlsx</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📋</div>
+                        <div class="font-medium">CSV</div>
+                        <div class="text-sm text-gray-500">.csv</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📝</div>
+                        <div class="font-medium">Word</div>
+                        <div class="text-sm text-gray-500">.doc, .docx</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📋</div>
+                        <div class="font-medium">PowerPoint</div>
+                        <div class="text-sm text-gray-500">.ppt, .pptx</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📖</div>
+                        <div class="font-medium">Markdown</div>
+                        <div class="text-sm text-gray-500">.md, .markdown</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">📄</div>
+                        <div class="font-medium">文本</div>
+                        <div class="text-sm text-gray-500">.txt</div>
+                    </div>
+                    <div class="text-center p-4 bg-gray-50 rounded-lg">
+                        <div class="text-2xl mb-2">🔧</div>
+                        <div class="font-medium">XML</div>
+                        <div class="text-sm text-gray-500">.xml</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    fileUrl: '',
+                    generatedUrl: '',
+                    baseUrl: this.getBaseUrl()
+                }
+            },
+            computed: {
+                baseUrl() {
+                    return this.getBaseUrl();
+                }
+            },
+            methods: {
+                getBaseUrl() {
+                    // 获取当前页面的协议、主机名和端口
+                    const protocol = window.location.protocol;
+                    const hostname = window.location.hostname;
+                    const port = window.location.port;
+                    
+                    // 构建基础URL
+                    let baseUrl = `${protocol}//${hostname}`;
+                    
+                    // 如果是开发环境（localhost）且有端口，添加端口
+                    if (hostname === 'localhost' && port) {
+                        baseUrl += `:${port}`;
+                    }
+                    
+                    return baseUrl;
+                },
+                
+                copyCode(elementId) {
+                    const element = document.getElementById(elementId);
+                    const text = element.textContent;
+                    
+                    navigator.clipboard.writeText(text).then(() => {
+                        // 显示复制成功提示
+                        const button = event.target;
+                        const originalText = button.textContent;
+                        button.textContent = '已复制';
+                        button.classList.add('copied');
+                        
+                        setTimeout(() => {
+                            button.textContent = originalText;
+                            button.classList.remove('copied');
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动复制');
+                    });
+                },
+                
+                generateUrl(type) {
+                    if (!this.fileUrl.trim()) {
+                        alert('请输入文件地址');
+                        return;
+                    }
+                    
+                    const baseUrl = this.getBaseUrl();
+                    const encodedUrl = encodeURIComponent(this.fileUrl.trim());
+                    
+                    if (type === 'simple') {
+                        this.generatedUrl = `${baseUrl}/filePreviewSimple.html?url=${encodedUrl}`;
+                    } else {
+                        this.generatedUrl = `${baseUrl}/filePreview.html?url=${encodedUrl}`;
+                    }
+                },
+                
+                copyUrl() {
+                    navigator.clipboard.writeText(this.generatedUrl).then(() => {
+                        alert('预览地址已复制到剪贴板');
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动复制');
+                    });
+                },
+                
+                copyIframeCode() {
+                    const iframeCode = `<iframe src="${this.generatedUrl}" width="100%" height="600"></iframe>`;
+                    
+                    navigator.clipboard.writeText(iframeCode).then(() => {
+                        alert('iframe代码已复制到剪贴板');
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动复制');
+                    });
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html> 

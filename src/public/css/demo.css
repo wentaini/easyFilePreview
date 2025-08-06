@@ -1,0 +1,111 @@
+/* 演示页面样式 */
+
+/* 演示iframe样式 */
+.demo-iframe {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+}
+
+/* 代码块样式 */
+.code-block {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 16px;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: auto;
+    position: relative;
+}
+
+/* 复制按钮样式 */
+.copy-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #374151;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.copy-button:hover {
+    background: #4b5563;
+}
+
+.copy-button.copied {
+    background: #10b981;
+}
+
+/* 功能特性卡片样式 */
+.feature-card {
+    text-align: center;
+    padding: 20px;
+    border-radius: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+}
+
+/* 示例代码容器 */
+.example-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+
+.example-header {
+    background: #f8fafc;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #374151;
+}
+
+.example-content {
+    padding: 24px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .code-block {
+        font-size: 12px;
+        padding: 12px;
+    }
+    
+    .copy-button {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    
+    .feature-card {
+        padding: 16px;
+    }
+    
+    .feature-icon {
+        width: 48px;
+        height: 48px;
+    }
+} 
+

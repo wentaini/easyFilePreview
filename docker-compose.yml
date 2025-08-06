@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  easyfilepreview:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: easyfilepreview
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - CORS_ORIGIN=*
+      - MAX_FILE_SIZE=52428800
+      - UPLOAD_DIR=./uploads
+      - CACHE_DIR=./cache
+      - MAX_CACHE_SIZE=104857600
+      - CACHE_EXPIRE=86400000
+    volumes:
+      - ./uploads:/app/uploads
+      - ./cache:/app/cache
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/filePreview/formats', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - easyfilepreview-network
+
+  # 开发环境服务
+  easyfilepreview-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: easyfilepreview-dev
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOST=0.0.0.0
+      - CORS_ORIGIN=*
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+    profiles:
+      - dev
+    networks:
+      - easyfilepreview-network
+
+networks:
+  easyfilepreview-network:
+    driver: bridge 

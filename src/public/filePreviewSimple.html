@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件预览</title>
+    <script src="./js/tailwindcss.js"></script>
+    <script src="./js/vue.global.js"></script>
+    <script src="./js/marked.min.js"></script>
+    <link rel="stylesheet" href="./css/common.css">
+    <link rel="stylesheet" href="./css/simple.css">
+</head>
+<body>
+    <!-- 复制提示工具 -->
+    <div id="copyTooltip" class="copy-tooltip">已复制到剪贴板</div>
+    <div id="app">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="flex items-center justify-center h-screen">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-gray-600">正在加载文件...</p>
+            </div>
+        </div>
+
+        <!-- 错误信息 -->
+        <div v-if="error" class="error-message">
+            <h3 class="text-lg font-semibold mb-2">加载失败</h3>
+            <p>{{ error }}</p>
+        </div>
+
+        <!-- 文件内容 -->
+        <div v-if="!loading && !error && previewData" class="h-screen overflow-auto">
+            <!-- PDF预览 -->
+            <div v-if="previewData.type === 'pdf'" class="h-full">
+                <!-- PDF信息提示 -->
+                <div v-if="previewData.error || previewData.isImageBased" class="p-4">
+                    <!-- 特殊提示 -->
+                    <div v-if="previewData.isImageBased" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                            </svg>
+                            <p class="text-sm text-blue-700">图片型PDF，建议直接查看文件</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 错误信息 -->
+                    <div v-if="previewData.error" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center">
+                            <svg class="w-4 h-4 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            <p class="text-sm text-red-700">解析错误: {{ previewData.error }}</p>
+                        </div>
+                    </div>
+                </div>
+                
+
+                
+                <!-- PDF查看器容器 -->
+                <div class="pdf-container relative h-full">
+                                    <!-- PDF查看器 -->
+                <iframe 
+                    v-if="previewData.fileUrl"
+                    :src="previewData.fileUrl"
+                    class="pdf-viewer"
+                    frameborder="0"
+                    width="100%"
+                    height="100vh"
+                    @load="handlePdfLoad"
+                    @error="handlePdfError"
+                ></iframe>
+                
+
+                    
+                    <!-- 加载状态 -->
+                    <div v-if="pdfLoading && !previewData.isLargeFile" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+                        <div class="text-center">
+                            <div class="loading-spinner mx-auto mb-2"></div>
+                            <p class="text-sm text-gray-600">正在加载PDF...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 错误状态 -->
+                    <div v-if="pdfError && !previewData.isLargeFile" class="absolute inset-0 bg-red-50 flex items-center justify-center">
+                        <div class="text-center p-4">
+                            <svg class="w-12 h-12 text-red-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                            <p class="text-red-600 font-medium">PDF加载失败</p>
+                            <p class="text-sm text-red-500 mt-1">可能是文件过大或浏览器不支持</p>
+                            <div class="mt-4">
+                                <a 
+                                    :href="`data:application/pdf;base64,${previewData.content}`"
+                                    download="document.pdf"
+                                    class="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    下载PDF文件
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 下载链接 -->
+                <div class="p-4 text-center">
+                    <a 
+                        :href="`data:application/pdf;base64,${previewData.content}`"
+                        download="document.pdf"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                        下载PDF文件
+                    </a>
+                </div>
+            </div>
+
+            <!-- Excel预览 -->
+            <div v-else-if="previewData.type === 'excel'" class="p-4">
+                <!-- 工作表标签 -->
+                <div v-if="previewData.sheetNames.length > 1" class="sheet-tabs mb-4">
+                    <div 
+                        v-for="sheetName in previewData.sheetNames" 
+                        :key="sheetName"
+                        @click="currentSheet = sheetName"
+                        :class="['sheet-tab', currentSheet === sheetName ? 'active' : '']"
+                    >
+                        {{ sheetName }}
+                    </div>
+                </div>
+
+                <!-- 表格内容 -->
+                <div class="overflow-x-auto relative">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th v-for="(cell, index) in currentSheetData[0] || []" :key="index">
+                                    {{ cell || `列${index + 1}` }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, rowIndex) in currentSheetData.slice(1)" :key="rowIndex">
+                                <td v-for="(cell, cellIndex) in row" :key="cellIndex" 
+                                    @click="copyCellContent(cell, rowIndex + 1, cellIndex + 1)"
+                                    :title="`点击复制: ${cell || ''}`">
+                                    <span v-if="cell !== null && cell !== undefined">{{ cell }}</span>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- 图片覆盖层 -->
+                    <div class="excel-images-overlay absolute top-0 left-0 w-full h-full pointer-events-none">
+                        <div 
+                            v-for="image in currentSheetImages" 
+                            :key="image.id"
+                            class="excel-image absolute"
+                            :style="{
+                                top: (image.position.row * 40) + 'px',
+                                left: (image.position.col * 120) + 'px',
+                                width: (image.position.width * 120) + 'px',
+                                height: (image.position.height * 40) + 'px',
+                                zIndex: 10
+                            }"
+                        >
+                            <img 
+                                v-if="image.src && image.src !== `data:${image.type};base64,`"
+                                :src="image.src" 
+                                :alt="image.name"
+                                class="w-full h-full object-contain border border-gray-300 rounded"
+                                @error="handleImageError(image, $event)"
+                                style="pointer-events: auto;"
+                            />
+                            <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 text-gray-500 text-xs">
+                                图片无效
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 图片列表 -->
+                <div v-if="currentSheetImages.length > 0" class="mt-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        <div 
+                            v-for="image in currentSheetImages" 
+                            :key="image.id"
+                            class="image-thumbnail"
+                        >
+                            <img 
+                                v-if="image.src && image.src !== `data:${image.type};base64,`"
+                                :src="image.src" 
+                                :alt="image.name"
+                                class="w-full h-24 object-cover border border-gray-300 rounded"
+                                @error="handleImageError(image, $event)"
+                            />
+                            <div v-else class="w-full h-24 flex items-center justify-center bg-gray-100 text-gray-500 text-xs border border-gray-300 rounded">
+                                图片无效
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CSV预览 -->
+            <div v-else-if="previewData.type === 'csv'" class="p-4">
+                <div class="overflow-x-auto">
+                    <table class="excel-table">
+                        <thead>
+                            <tr>
+                                <th v-for="(cell, index) in previewData.data[0] || []" :key="index">
+                                    {{ cell || `列${index + 1}` }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, rowIndex) in previewData.data.slice(1)" :key="rowIndex">
+                                <td v-for="(cell, cellIndex) in row" :key="cellIndex" 
+                                    @click="copyCellContent(cell, rowIndex + 1, cellIndex + 1)"
+                                    :title="`点击复制: ${cell || ''}`">
+                                    <span v-if="cell !== null && cell !== undefined && cell !== ''">{{ cell }}</span>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Word预览 -->
+            <div v-else-if="previewData.type === 'word'" class="p-4">
+                <div class="bg-white border rounded-lg p-6">
+                    <div v-if="previewData.contentType === 'text/html'" 
+                         v-html="previewData.content" 
+                         class="word-content">
+                    </div>
+                    <div v-else class="text-content">
+                        {{ previewData.content }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- PowerPoint预览 -->
+            <div v-else-if="previewData.type === 'powerpoint'" class="p-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div v-if="previewData.slideCount > 0" class="mb-4">
+                        <h4 class="text-md font-medium text-blue-900 mb-2">幻灯片信息</h4>
+                        <p class="text-blue-700">总幻灯片数: {{ previewData.slideCount }}</p>
+                    </div>
+                    <div v-if="previewData.contentType === 'text/html'" 
+                         v-html="previewData.content" 
+                         class="powerpoint-content">
+                    </div>
+                    <div v-else class="text-content">
+                        {{ previewData.content }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Markdown预览 -->
+            <div v-else-if="previewData.type === 'markdown'" class="p-4">
+                <div class="bg-white border rounded-lg p-6">
+                    <div v-if="previewData.contentType === 'text/html'" 
+                         v-html="previewData.content" 
+                         class="markdown-content">
+                    </div>
+                    <div v-else class="text-content">
+                        {{ previewData.content }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 文本预览 -->
+            <div v-else-if="previewData.type === 'text'" class="p-4">
+                <div class="text-content">
+                    {{ previewData.content }}
+                </div>
+            </div>
+
+            <!-- XML预览 -->
+            <div v-else-if="previewData.type === 'xml'" class="p-4">
+                <div class="xml-content">
+                    {{ previewData.content }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    loading: false,
+                    error: null,
+                    previewData: null,
+                    currentSheet: null,
+                    pdfLoading: false,
+                    pdfError: false
+                }
+            },
+            computed: {
+                currentSheetData() {
+                    if (!this.previewData || this.previewData.type !== 'excel' || !this.currentSheet) {
+                        return [];
+                    }
+                    return this.previewData.sheets[this.currentSheet] || [];
+                },
+                currentSheetImages() {
+                    if (!this.previewData || this.previewData.type !== 'excel' || !this.currentSheet) {
+                        return [];
+                    }
+                    return this.previewData.images[this.currentSheet] || [];
+                }
+            },
+            methods: {
+                async loadFile() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const url = urlParams.get('url');
+                    
+                    if (!url) {
+                        this.error = '未提供文件URL';
+                        return;
+                    }
+
+                    this.loading = true;
+                    this.error = null;
+                    this.previewData = null;
+                    this.pdfLoading = false;
+                    this.pdfError = false;
+
+                    try {
+                        const response = await fetch(`/api/filePreview/preview?url=${encodeURIComponent(url)}`);
+                        const result = await response.json();
+
+                        if (result.success) {
+                            this.previewData = result.data.preview;
+                            
+                            // 如果是PDF文件，设置加载状态
+                            if (this.previewData.type === 'pdf') {
+                                this.pdfLoading = true;
+                                this.checkPdfTimeout(); // 启动超时检测
+                            }
+                            
+                            // 设置默认工作表
+                            if (this.previewData.type === 'excel' && this.previewData.sheetNames.length > 0) {
+                                this.currentSheet = this.previewData.sheetNames[0];
+                            }
+                        } else {
+                            this.error = result.message;
+                        }
+                    } catch (error) {
+                        this.error = `请求失败: ${error.message}`;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                handleImageError(image, event) {
+                    console.error('🖼️  图片加载失败:', image.name, event);
+                },
+                copyCellContent(content, row, col) {
+                    if (content === null || content === undefined || content === '') {
+                        return;
+                    }
+                    
+                    const textToCopy = String(content);
+                    
+                    // 使用现代浏览器的 Clipboard API
+                    if (navigator.clipboard && window.isSecureContext) {
+                        navigator.clipboard.writeText(textToCopy).then(() => {
+                            this.showCopyTooltip(`已复制: ${textToCopy}`, row, col);
+                        }).catch(err => {
+                            console.error('复制失败:', err);
+                            this.fallbackCopy(textToCopy, row, col);
+                        });
+                    } else {
+                        // 降级方案：使用传统的 document.execCommand
+                        this.fallbackCopy(textToCopy, row, col);
+                    }
+                },
+                showCopyTooltip(message, row, col) {
+                    const tooltip = document.getElementById('copyTooltip');
+                    if (tooltip) {
+                        tooltip.textContent = message;
+                        tooltip.classList.add('show');
+                        
+                        // 2秒后隐藏提示
+                        setTimeout(() => {
+                            tooltip.classList.remove('show');
+                        }, 2000);
+                    }
+                },
+                fallbackCopy(text, row, col) {
+                    // 创建临时文本区域
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            this.showCopyTooltip(`已复制: ${text}`, row, col);
+                        } else {
+                            this.showCopyTooltip('复制失败，请手动选择文本', row, col);
+                        }
+                    } catch (err) {
+                        console.error('复制失败:', err);
+                        this.showCopyTooltip('复制失败，请手动选择文本', row, col);
+                    }
+                    
+                    document.body.removeChild(textArea);
+                },
+                handlePdfLoad() {
+                    console.log('✅ PDF加载成功');
+                    this.pdfLoading = false;
+                    this.pdfError = false;
+                    
+                    // 检查iframe是否真正加载了内容
+                    setTimeout(() => {
+                        const iframe = document.querySelector('.pdf-viewer');
+                        if (iframe) {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (!iframeDoc || iframeDoc.body.innerHTML.trim() === '') {
+                                    console.warn('⚠️  PDF iframe内容为空，可能加载失败');
+                                    this.pdfError = true;
+                                }
+                            } catch (e) {
+                                console.log('无法检查iframe内容（跨域限制）');
+                            }
+                        }
+                    }, 2000);
+                },
+                handlePdfError() {
+                    console.error('❌ PDF加载失败');
+                    this.pdfLoading = false;
+                    this.pdfError = true;
+                },
+                // 添加超时检测
+                checkPdfTimeout() {
+                    if (this.pdfLoading) {
+                        setTimeout(() => {
+                            if (this.pdfLoading) {
+                                console.warn('⚠️  PDF加载超时');
+                                this.pdfLoading = false;
+                                this.pdfError = true;
+                            }
+                        }, 30000); // 30秒超时
+                    }
+                },
+
+            },
+            mounted() {
+                this.loadFile();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html> 

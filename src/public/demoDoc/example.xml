@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- EasyFilePreview XML演示文档 -->
+<easyfilepreview>
+    <metadata>
+        <title>EasyFilePreview 文件预览组件</title>
+        <version>1.0.0</version>
+        <description>轻量级文件预览组件，支持多格式响应式预览</description>
+        <author>wentaini</author>
+        <created>2025-08-06</created>
+        <license>Apache License 2.0</license>
+        <repository>
+            <url>https://github.com/wentaini/easyFilePreview</url>
+            <type>git</type>
+        </repository>
+    </metadata>
+
+    <features>
+        <feature id="multi-format">
+            <name>多格式支持</name>
+            <description>支持PDF、Office、CSV、Markdown等多种文件格式</description>
+            <supported-formats>
+                <format>
+                    <extension>pdf</extension>
+                    <mime-type>application/pdf</mime-type>
+                    <description>PDF文档</description>
+                </format>
+                <format>
+                    <extension>xls</extension>
+                    <mime-type>application/vnd.ms-excel</mime-type>
+                    <description>Excel文件</description>
+                </format>
+                <format>
+                    <extension>xlsx</extension>
+                    <mime-type>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</mime-type>
+                    <description>Excel文件(新版)</description>
+                </format>
+                <format>
+                    <extension>doc</extension>
+                    <mime-type>application/msword</mime-type>
+                    <description>Word文档</description>
+                </format>
+                <format>
+                    <extension>docx</extension>
+                    <mime-type>application/vnd.openxmlformats-officedocument.wordprocessingml.document</mime-type>
+                    <description>Word文档(新版)</description>
+                </format>
+                <format>
+                    <extension>ppt</extension>
+                    <mime-type>application/vnd.ms-powerpoint</mime-type>
+                    <description>PowerPoint演示文稿</description>
+                </format>
+                <format>
+                    <extension>pptx</extension>
+                    <mime-type>application/vnd.openxmlformats-officedocument.presentationml.presentation</mime-type>
+                    <description>PowerPoint演示文稿(新版)</description>
+                </format>
+                <format>
+                    <extension>csv</extension>
+                    <mime-type>text/csv</mime-type>
+                    <description>CSV文件</description>
+                </format>
+                <format>
+                    <extension>md</extension>
+                    <mime-type>text/markdown</mime-type>
+                    <description>Markdown文档</description>
+                </format>
+                <format>
+                    <extension>txt</extension>
+                    <mime-type>text/plain</mime-type>
+                    <description>文本文件</description>
+                </format>
+                <format>
+                    <extension>xml</extension>
+                    <mime-type>application/xml</mime-type>
+                    <description>XML文档</description>
+                </format>
+            </supported-formats>
+        </feature>
+
+        <feature id="responsive">
+            <name>响应式设计</name>
+            <description>完美适配PC、平板、手机等不同设备</description>
+            <breakpoints>
+                <breakpoint>
+                    <device>mobile</device>
+                    <max-width>768px</max-width>
+                    <description>移动端适配</description>
+                </breakpoint>
+                <breakpoint>
+                    <device>tablet</device>
+                    <min-width>769px</min-width>
+                    <max-width>1024px</max-width>
+                    <description>平板端适配</description>
+                </breakpoint>
+                <breakpoint>
+                    <device>desktop</device>
+                    <min-width>1025px</min-width>
+                    <description>桌面端适配</description>
+                </breakpoint>
+            </breakpoints>
+        </feature>
+
+        <feature id="iframe">
+            <name>iframe嵌入</name>
+            <description>可轻松嵌入到其他页面中使用</description>
+            <usage>
+                <code>&lt;iframe src="http://localhost:3000/filePreview.html?url=YOUR_FILE_URL" width="100%" height="600"&gt;&lt;/iframe&gt;</code>
+            </usage>
+        </feature>
+
+        <feature id="copy">
+            <name>一键复制</name>
+            <description>Excel和CSV支持单元格点击复制功能</description>
+            <supported-browsers>
+                <browser>Chrome</browser>
+                <browser>Firefox</browser>
+                <browser>Safari</browser>
+                <browser>Edge</browser>
+            </supported-browsers>
+        </feature>
+    </features>
+
+    <api>
+        <endpoint path="/api/filePreview/preview">
+            <method>GET</method>
+            <description>文件预览接口</description>
+            <parameters>
+                <parameter>
+                    <name>url</name>
+                    <type>string</type>
+                    <required>true</required>
+                    <description>文件URL地址</description>
+                </parameter>
+            </parameters>
+            <response>
+                <success>
+                    <code>200</code>
+                    <example>
+                        <![CDATA[
+{
+  "success": true,
+  "message": "文件预览成功",
+  "data": {
+    "fileInfo": {
+      "url": "https://example.com/document.pdf",
+      "extension": "pdf",
+      "contentType": "application/pdf",
+      "isSupported": true,
+      "fileName": "document.pdf"
+    },
+    "preview": {
+      "type": "pdf",
+      "fileUrl": "https://example.com/document.pdf",
+      "contentType": "application/pdf"
+    }
+  }
+}
+                        ]]>
+                    </example>
+                </success>
+                <error>
+                    <code>400</code>
+                    <example>
+                        <![CDATA[
+{
+  "success": false,
+  "message": "不支持的文件格式",
+  "data": {
+    "fileInfo": {
+      "url": "https://example.com/document.xyz",
+      "extension": "xyz",
+      "contentType": "application/octet-stream",
+      "isSupported": false,
+      "fileName": "document.xyz"
+    }
+  }
+}
+                        ]]>
+                    </example>
+                </error>
+            </response>
+        </endpoint>
+
+        <endpoint path="/api/filePreview/info">
+            <method>GET</method>
+            <description>获取文件信息接口</description>
+            <parameters>
+                <parameter>
+                    <name>url</name>
+                    <type>string</type>
+                    <required>true</required>
+                    <description>文件URL地址</description>
+                </parameter>
+            </parameters>
+            <response>
+                <success>
+                    <code>200</code>
+                    <example>
+                        <![CDATA[
+{
+  "success": true,
+  "data": {
+    "fileName": "document.pdf",
+    "extension": "pdf",
+    "contentType": "application/pdf",
+    "isSupported": true
+  }
+}
+                        ]]>
+                    </example>
+                </success>
+            </response>
+        </endpoint>
+
+        <endpoint path="/api/filePreview/formats">
+            <method>GET</method>
+            <description>获取支持格式列表接口</description>
+            <response>
+                <success>
+                    <code>200</code>
+                    <example>
+                        <![CDATA[
+{
+  "success": true,
+  "data": {
+    "formats": [
+      {
+        "extension": "pdf",
+        "mimeType": "application/pdf",
+        "description": "PDF文档"
+      }
+    ],
+    "count": 12
+  }
+}
+                        ]]>
+                    </example>
+                </success>
+            </response>
+        </endpoint>
+    </api>
+
+    <technology-stack>
+        <frontend>
+            <technology>
+                <name>TailwindCSS</name>
+                <version>最新版</version>
+                <purpose>UI框架</purpose>
+                <cdn>https://oss.vtopideal.com/prod/static/js/tailwindcss.js</cdn>
+            </technology>
+            <technology>
+                <name>Vue.js</name>
+                <version>3.x</version>
+                <purpose>MVVM框架</purpose>
+                <cdn>https://oss.vtopideal.com/prod/static/js/vue.global.js</cdn>
+            </technology>
+            <technology>
+                <name>Chart.js</name>
+                <version>最新版</version>
+                <purpose>图表展示</purpose>
+                <cdn>https://oss.vtopideal.com/prod/static/js/chart.js</cdn>
+            </technology>
+            <technology>
+                <name>Marked.js</name>
+                <version>最新版</version>
+                <purpose>Markdown渲染</purpose>
+                <cdn>https://oss.vtopideal.com/prod/static/js/marked.min.js</cdn>
+            </technology>
+        </frontend>
+
+        <backend>
+            <technology>
+                <name>Express.js</name>
+                <version>4.x</version>
+                <purpose>Web框架</purpose>
+            </technology>
+            <technology>
+                <name>Multer</name>
+                <version>最新版</version>
+                <purpose>文件上传</purpose>
+            </technology>
+            <technology>
+                <name>Joi</name>
+                <version>最新版</version>
+                <purpose>参数校验</purpose>
+            </technology>
+            <technology>
+                <name>Winston</name>
+                <version>最新版</version>
+                <purpose>日志管理</purpose>
+            </technology>
+        </backend>
+    </technology-stack>
+
+    <configuration>
+        <server>
+            <port>3000</port>
+            <host>localhost</host>
+            <timeout>600</timeout>
+        </server>
+
+        <cors>
+            <origin>*</origin>
+            <credentials>true</credentials>
+            <methods>
+                <method>GET</method>
+                <method>POST</method>
+                <method>PUT</method>
+                <method>DELETE</method>
+                <method>OPTIONS</method>
+            </methods>
+        </cors>
+
+        <file-upload>
+            <max-size>52428800</max-size>
+            <upload-dir>./uploads</upload-dir>
+            <allowed-types>
+                <type>pdf</type>
+                <type>xls</type>
+                <type>xlsx</type>
+                <type>doc</type>
+                <type>docx</type>
+                <type>ppt</type>
+                <type>pptx</type>
+                <type>csv</type>
+                <type>md</type>
+                <type>txt</type>
+                <type>xml</type>
+            </allowed-types>
+        </file-upload>
+
+        <cache>
+            <cache-dir>./cache</cache-dir>
+            <max-size>104857600</max-size>
+            <expire>86400000</expire>
+        </cache>
+
+        <security>
+            <csp>
+                <directives>
+                    <directive>
+                        <name>defaultSrc</name>
+                        <values>
+                            <value>'self'</value>
+                        </values>
+                    </directive>
+                    <directive>
+                        <name>styleSrc</name>
+                        <values>
+                            <value>'self'</value>
+                            <value>'unsafe-inline'</value>
+                        </values>
+                    </directive>
+                    <directive>
+                        <name>scriptSrc</name>
+                        <values>
+                            <value>'self'</value>
+                        </values>
+                    </directive>
+                    <directive>
+                        <name>imgSrc</name>
+                        <values>
+                            <value>'self'</value>
+                            <value>data:</value>
+                            <value>https:</value>
+                        </values>
+                    </directive>
+                </directives>
+            </csp>
+        </security>
+    </configuration>
+
+    <performance>
+        <optimization>
+            <strategy>
+                <name>文件缓存</name>
+                <description>已预览的文件缓存24小时</description>
+            </strategy>
+            <strategy>
+                <name>CDN加速</name>
+                <description>静态资源使用CDN</description>
+            </strategy>
+            <strategy>
+                <name>压缩传输</name>
+                <description>启用gzip压缩</description>
+            </strategy>
+            <strategy>
+                <name>懒加载</name>
+                <description>大文件分片加载</description>
+            </strategy>
+        </optimization>
+
+        <memory-management>
+            <cleanup-interval>60000</cleanup-interval>
+            <max-cache-size>104857600</max-cache-size>
+            <cleanup-strategy>LRU</cleanup-strategy>
+        </memory-management>
+    </performance>
+
+    <faq>
+        <question>
+            <text>如何解决跨域问题？</text>
+            <answer>确保服务器配置了正确的CORS头，允许跨域访问</answer>
+            <solution>
+                <![CDATA[
+app.use(cors({
+  origin: '*',
+  credentials: true
+}));
+                ]]>
+            </solution>
+        </question>
+
+        <question>
+            <text>大文件加载慢怎么办？</text>
+            <answer>可以启用分片加载，将大文件分成小块进行传输</answer>
+            <solution>
+                <![CDATA[
+const chunkSize = 1024 * 1024; // 1MB
+const chunks = Math.ceil(fileSize / chunkSize);
+                ]]>
+            </solution>
+        </question>
+
+        <question>
+            <text>如何自定义样式？</text>
+            <answer>可以通过CSS变量自定义主题颜色和样式</answer>
+            <solution>
+                <![CDATA[
+:root {
+  --primary-color: #3b82f6;
+  --border-color: #e5e7eb;
+  --text-color: #374151;
+}
+                ]]>
+            </solution>
+        </question>
+    </faq>
+
+    <license>
+        <name>Apache License 2.0</name>
+        <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        <copyright>wentaini</copyright>
+        <year>2025</year>
+    </license>
+
+    <contact>
+        <project-url>https://github.com/wentaini/easyFilePreview</project-url>
+        <issues-url>https://github.com/wentaini/easyFilePreview/issues</issues-url>
+        <email>support@example.com</email>
+    </contact>
+
+    <demo>
+        <note>这是一个XML演示文档，展示了XML预览功能的各种特性，包括元素、属性、CDATA、注释等格式。</note>
+        <last-updated>2025年8月</last-updated>
+    </demo>
+</easyfilepreview>
