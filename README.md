@@ -41,7 +41,7 @@
 | **TailwindCSS** | 最新 | UI框架，响应式样式 |
 | **Vue.js** | 3.0+ | MVVM框架，数据绑定 |
 | **Marked.js** | 最新 | Markdown渲染 |
-| **Chart.js** | 最新 | 图表展示 |
+
 
 ### 后端技术
 | 技术 | 版本 | 用途 |
