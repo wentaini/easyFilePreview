@@ -150,7 +150,6 @@ GET /api/filePreview/preview?url={fileUrl}
 
 **参数说明**
 - `url`: 文件URL地址（必需）
-- `simple`: 是否使用简化模式（可选，true/false）
 
 **响应示例**
 ```json
