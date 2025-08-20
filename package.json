@@ -13,11 +13,14 @@
     "body-parser": "^1.20.2",
     "cheerio": "^1.0.0",
     "cors": "^2.8.5",
+    "docx-parser": "^0.2.1",
     "docxtemplater": "^3.63.2",
     "dotenv": "^17.2.1",
     "express": "^4.19.2",
     "express-session": "^1.18.1",
     "fs": "^0.0.1-security",
+    "iconv-lite": "^0.6.3",
+    "mammoth": "^1.9.0",
     "marked": "^16.1.1",
     "minimist": "^1.2.8",
     "officeparser": "^5.1.1",
@@ -32,8 +35,6 @@
     "url": "^0.11.3",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5",
-    "xml2js": "^0.6.2",
-    "mammoth": "^1.9.0",
-    "iconv-lite": "^0.6.3"
+    "xml2js": "^0.6.2"
   }
 }

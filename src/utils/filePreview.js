@@ -369,9 +369,28 @@ class FilePreview {
     /**
      * 预览Word文档
      * @param {Buffer} buffer 文件内容
+     * @param {string} fileExtension 文件扩展名
      * @returns {Object} 预览信息
      */
-    async previewWord(buffer) {
+    async previewWord(buffer, fileExtension = 'docx') {
+        try {
+            // 根据文件扩展名选择不同的处理方法
+            if (fileExtension.toLowerCase() === 'doc') {
+                return await this.previewDocFile(buffer);
+            } else {
+                return await this.previewDocxFile(buffer);
+            }
+        } catch (error) {
+            throw new Error(`解析Word文档失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 预览DOCX文件（新版Word格式）
+     * @param {Buffer} buffer 文件内容
+     * @returns {Object} 预览信息
+     */
+    async previewDocxFile(buffer) {
         try {
             // 使用mammoth提取HTML格式，保留格式
             const result = await mammoth.convertToHtml({ 
@@ -485,6 +504,863 @@ class FilePreview {
         } catch (error) {
             throw new Error(`解析Word文档失败: ${error.message}`);
         }
+    }
+
+    /**
+     * 预览DOC文件（旧版Word格式）
+     * @param {Buffer} buffer 文件内容
+     * @returns {Object} 预览信息
+     */
+    async previewDocFile(buffer) {
+        try {
+                        // 尝试使用mammoth直接转换为HTML（如果支持）
+            try {
+                const result = await mammoth.convertToHtml({ buffer });
+                if (result.value) {
+                    console.log('🔍 [DEBUG] mammoth成功转换为HTML，长度:', result.value.length);
+                    console.log('🔍 [DEBUG] mammoth转换结果预览:', result.value.substring(0, 200));
+                    return {
+                        type: 'word',
+                        content: result.value,
+                        messages: result.messages,
+                        contentType: 'text/html'
+                    };
+                }
+            } catch (mammothError) {
+                console.log('🔍 [DEBUG] mammoth转换失败，回退到textract:', mammothError.message);
+            }
+            
+            // 使用textract提取文本内容
+            const textract = require('textract');
+            
+            return new Promise((resolve, reject) => {
+                textract.fromBufferWithMime('application/msword', buffer, {
+                    preserveLineBreaks: true,
+                    preserveOnlyMultipleLineBreaks: true
+                }, (error, text) => {
+                    if (error) {
+                        console.log('🔍 [DEBUG] textract提取失败，尝试使用officeparser:', error.message);
+                        // 如果textract失败，尝试使用officeparser
+                        this.previewDocWithOfficeParser(buffer)
+                            .then(resolve)
+                            .catch(reject);
+                    } else {
+                        console.log('🔍 [DEBUG] 原始提取的文本:', text);
+                        console.log('🔍 [DEBUG] 文本长度:', text.length);
+                        
+                        // mammoth转换失败时，直接显示原始文本
+                        const htmlContent = this.convertRawTextToHtml(text);
+                        console.log('🔍 [DEBUG] 转换后的HTML长度:', htmlContent.length);
+                        console.log('🔍 [DEBUG] 转换后的HTML预览:', htmlContent);
+                        resolve({
+                            type: 'word',
+                            content: htmlContent,
+                            messages: [],
+                            contentType: 'text/html'
+                        });
+                    }
+                });
+            });
+        } catch (error) {
+            throw new Error(`解析DOC文件失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 使用officeparser处理DOC文件
+     * @param {Buffer} buffer 文件内容
+     * @returns {Object} 预览信息
+     */
+    async previewDocWithOfficeParser(buffer) {
+        try {
+            const officeParser = require('officeparser');
+            
+            const result = await officeParser.parseBuffer(buffer);
+            
+            if (result && result.text) {
+                const htmlContent = this.convertTextToHtml(result.text);
+                return {
+                    type: 'word',
+                    content: htmlContent,
+                    messages: [],
+                    contentType: 'text/html'
+                };
+            } else {
+                throw new Error('无法提取文档内容');
+            }
+        } catch (error) {
+            throw new Error(`officeparser解析失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 将纯文本转换为格式化的HTML
+     * @param {string} text 纯文本内容
+     * @returns {string} 格式化的HTML内容
+     */
+    convertTextToHtml(text) {
+        if (!text || typeof text !== 'string') {
+            return '<p>无法提取文档内容</p>';
+        }
+
+        // 清理文本
+        let cleanText = text.trim();
+        
+        // 处理表格数据 - 检测表格结构
+        if (this.isTableData(cleanText)) {
+            return this.convertTableToHtml(cleanText);
+        }
+        
+        // 处理段落分隔 - 更智能的分段
+        let paragraphs = this.splitIntelligentParagraphs(cleanText);
+        
+        // 转换为HTML
+        let htmlContent = '<div class="word-document" style="font-family: Arial, sans-serif; line-height: 1.6;">';
+        
+        paragraphs.forEach(paragraph => {
+            const trimmedParagraph = paragraph.trim();
+            if (trimmedParagraph.length === 0) return;
+            
+            // 检测标题（基于长度、大写字母比例等）
+            if (this.isHeading(trimmedParagraph)) {
+                htmlContent += `<h2 style="color: #2c3e50; margin: 1em 0 0.5em 0; font-size: 1.5em; font-weight: bold; border-bottom: 2px solid #3498db; padding-bottom: 0.3em;">${this.escapeHtml(trimmedParagraph)}</h2>`;
+            } else if (this.isListItem(trimmedParagraph)) {
+                // 处理列表项
+                let listContent = this.processListItem(trimmedParagraph);
+                htmlContent += `<div style="margin: 0.5em 0; padding-left: 1.5em;">${listContent}</div>`;
+            } else {
+                // 处理普通段落
+                let processedParagraph = this.processParagraph(trimmedParagraph);
+                htmlContent += `<p style="margin: 0.8em 0; line-height: 1.8; text-align: justify; text-indent: 2em;">${processedParagraph}</p>`;
+            }
+        });
+        
+        htmlContent += '</div>';
+        
+        return htmlContent;
+    }
+
+    /**
+     * 将原始文本直接转换为HTML（mammoth转换失败时使用）
+     * @param {string} text 原始文本内容
+     * @returns {string} 格式化的HTML内容
+     */
+    convertRawTextToHtml(text) {
+        if (!text || typeof text !== 'string') {
+            return '<p>无法提取文档内容</p>';
+        }
+
+        // 清理文本
+        let cleanText = text.trim();
+        
+        // 直接按换行符分割，保持原始格式
+        let lines = cleanText.split(/\n/).filter(line => line.trim().length > 0);
+        
+        // 转换为HTML，保持原始格式
+        let htmlContent = '<div class="word-document" style="font-family: Arial, sans-serif; line-height: 1.6; white-space: pre-wrap;">';
+        
+        if (lines.length === 0) {
+            htmlContent += '<p>文档内容为空</p>';
+        } else {
+            lines.forEach(line => {
+                const trimmedLine = line.trim();
+                if (trimmedLine.length === 0) {
+                    htmlContent += '<br>';
+                } else {
+                    htmlContent += `<p style="margin: 0.5em 0; line-height: 1.6;">${this.escapeHtml(trimmedLine)}</p>`;
+                }
+            });
+        }
+        
+        htmlContent += '</div>';
+        
+        return htmlContent;
+    }
+
+    /**
+     * 判断是否为标题
+     * @param {string} text 文本内容
+     * @returns {boolean} 是否为标题
+     */
+    isHeading(text) {
+        // 标题通常较短，且包含较多大写字母
+        const length = text.length;
+        const upperCaseCount = (text.match(/[A-Z]/g) || []).length;
+        const upperCaseRatio = upperCaseCount / length;
+        
+        // 标题特征：长度小于100，大写字母比例大于0.3，或者以数字开头
+        return (length < 100 && upperCaseRatio > 0.3) || /^\d+\./.test(text);
+    }
+
+    /**
+     * 处理段落内容
+     * @param {string} paragraph 段落文本
+     * @returns {string} 处理后的HTML
+     */
+    processParagraph(paragraph) {
+        let processed = this.escapeHtml(paragraph);
+        
+        // 处理粗体文本（用**包围的文本）
+        processed = processed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // 处理斜体文本（用*包围的文本）
+        processed = processed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        
+        // 处理下划线文本（用__包围的文本）
+        processed = processed.replace(/__(.*?)__/g, '<u>$1</u>');
+        
+        // 处理列表项
+        if (/^[\s]*[-*•]\s/.test(processed)) {
+            processed = processed.replace(/^[\s]*[-*•]\s/, '• ');
+        }
+        
+        // 处理编号列表
+        if (/^[\s]*\d+\.\s/.test(processed)) {
+            // 保持原样，因为已经在段落中
+        }
+        
+        return processed;
+    }
+
+    /**
+     * 检测是否为表格数据
+     * @param {string} text 文本内容
+     * @returns {boolean} 是否为表格数据
+     */
+    isTableData(text) {
+        // 基于格式特征检测表格，而不是内容关键词
+        const lines = text.split(/\n/).filter(line => line.trim().length > 0);
+        
+        // 如果只有一行，尝试检测是否包含表格特征
+        if (lines.length === 1) {
+            return this.isSingleLineTable(lines[0]);
+        }
+        
+        if (lines.length < 2) return false;
+        
+        // 检测格式特征
+        const formatFeatures = {
+            hasConsistentColumns: false,
+            hasNumberedRows: false,
+            hasTabularStructure: false,
+            hasMultipleDataRows: false
+        };
+        
+        // 1. 检测是否有编号行
+        formatFeatures.hasNumberedRows = lines.some(line => /^\d+[\.\s]/.test(line.trim()));
+        
+        // 2. 检测是否有表格结构（多列数据）
+        const columnCounts = lines.map(line => {
+            // 计算每行的列数（基于空格分隔）
+            const parts = line.trim().split(/\s{2,}/);
+            return parts.length;
+        });
+        
+        // 如果大部分行都有相同的列数，说明有表格结构
+        const mostCommonColumnCount = this.getMostCommonValue(columnCounts);
+        formatFeatures.hasConsistentColumns = columnCounts.filter(count => count === mostCommonColumnCount).length >= Math.floor(lines.length * 0.6);
+        formatFeatures.hasTabularStructure = mostCommonColumnCount >= 3;
+        
+        // 3. 检测是否有多个数据行
+        formatFeatures.hasMultipleDataRows = lines.length >= 3;
+        
+        // 综合判断是否为表格
+        return formatFeatures.hasTabularStructure && 
+               formatFeatures.hasMultipleDataRows && 
+               (formatFeatures.hasNumberedRows || formatFeatures.hasConsistentColumns);
+    }
+
+    /**
+     * 检测单行是否为表格
+     * @param {string} line 单行文本
+     * @returns {boolean} 是否为表格
+     */
+    isSingleLineTable(line) {
+        // 检测是否包含多个数字序号
+        const numberMatches = line.match(/\d+[\.\s]+/g);
+        if (!numberMatches || numberMatches.length < 2) return false;
+        
+        // 检测是否包含表格关键词（作为辅助判断）
+        const tableKeywords = ['序号', '品名', '规格', '数量', '重量', '日期', '报检单号'];
+        const hasTableKeywords = tableKeywords.some(keyword => line.includes(keyword));
+        
+        // 检测是否包含多个数据项
+        const dataItems = line.split(/\d+[\.\s]+/).filter(item => item.trim().length > 0);
+        const hasMultipleItems = dataItems.length >= 2;
+        
+        return hasTableKeywords && hasMultipleItems;
+    }
+
+    /**
+     * 将表格数据转换为HTML表格
+     * @param {string} text 表格文本
+     * @returns {string} HTML表格
+     */
+    convertTableToHtml(text) {
+        // 按行分割
+        const lines = text.split(/\n/).filter(line => line.trim().length > 0);
+        
+        let htmlContent = '<div class="word-document" style="font-family: Arial, sans-serif;">';
+        
+        // 处理标题行
+        if (lines.length > 0) {
+            const titleLine = lines[0];
+            // 提取文档标题
+            const title = this.extractDocumentTitle(titleLine);
+            if (title) {
+                htmlContent += `<h2 style="color: #2c3e50; margin: 1em 0 0.5em 0; font-size: 1.5em; font-weight: bold; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 0.3em;">${this.escapeHtml(title)}</h2>`;
+            }
+        }
+        
+        // 智能解析表格结构
+        const tableStructure = this.analyzeTableStructure(text);
+        
+        // 处理表格内容
+        htmlContent += '<div style="overflow-x: auto; margin: 1em 0;">';
+        htmlContent += '<table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; font-size: 14px;">';
+        
+        // 动态生成表头
+        if (tableStructure.headers.length > 0) {
+            htmlContent += '<thead>';
+            htmlContent += '<tr style="background-color: #f8f9fa;">';
+            tableStructure.headers.forEach(header => {
+                htmlContent += `<th style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold;">${this.escapeHtml(header)}</th>`;
+            });
+            htmlContent += '</tr>';
+            htmlContent += '</thead>';
+        }
+        
+        // 表格内容
+        htmlContent += '<tbody>';
+        
+        // 解析数据行
+        const dataRows = this.parseTableData(text, tableStructure);
+        dataRows.forEach(row => {
+            htmlContent += '<tr>';
+            tableStructure.headers.forEach(header => {
+                const value = row[header] || '';
+                const align = this.getColumnAlignment(header);
+                htmlContent += `<td style="border: 1px solid #ddd; padding: 8px; text-align: ${align};">${this.escapeHtml(value)}</td>`;
+            });
+            htmlContent += '</tr>';
+        });
+        
+        htmlContent += '</tbody>';
+        htmlContent += '</table>';
+        htmlContent += '</div>';
+        htmlContent += '</div>';
+        
+        return htmlContent;
+    }
+
+    /**
+     * 解析表格数据
+     * @param {string} text 表格文本
+     * @param {Object} tableStructure 表格结构信息
+     * @returns {Array} 解析后的数据行
+     */
+    parseTableData(text, tableStructure) {
+        const rows = [];
+        const lines = text.split(/\n/).filter(line => line.trim().length > 0);
+        
+        if (lines.length === 1) {
+            // 处理单行表格
+            return this.parseSingleLineTable(text, tableStructure);
+        }
+        
+        // 跳过标题行
+        const dataLines = lines.slice(1);
+        
+        dataLines.forEach(line => {
+            const row = this.parseTableRow(line, tableStructure);
+            if (row && Object.keys(row).length > 0) {
+                rows.push(row);
+            }
+        });
+        
+        return rows;
+    }
+
+    /**
+     * 解析单行表格
+     * @param {string} text 表格文本
+     * @param {Object} tableStructure 表格结构信息
+     * @returns {Array} 解析后的数据行
+     */
+    parseSingleLineTable(text, tableStructure) {
+        const rows = [];
+        
+        console.log('🔍 [DEBUG] 解析单行表格，文本长度:', text.length);
+        console.log('🔍 [DEBUG] 表头:', tableStructure.headers);
+        
+        // 使用更通用的正则表达式匹配数据行
+        // 匹配模式：数字 + 空格 + 任意内容（直到下一个数字或结尾）
+        const dataMatches = text.match(/\d+\s+[^0-9]+?(?=\d+\s|$)/g);
+        
+        console.log('🔍 [DEBUG] 找到的数据行数:', dataMatches ? dataMatches.length : 0);
+        
+        if (dataMatches) {
+            dataMatches.forEach((match, index) => {
+                console.log('🔍 [DEBUG] 处理数据行', index + 1, ':', match);
+                
+                const row = {};
+                
+                // 提取序号
+                const numberMatch = match.match(/^(\d+)/);
+                const number = numberMatch ? numberMatch[1] : (index + 1).toString();
+                
+                // 提取数据部分
+                const dataPart = match.replace(/^\d+\s+/, '');
+                
+                // 智能分割数据
+                const parts = this.splitTableDataIntelligently(dataPart);
+                console.log('🔍 [DEBUG] 分割后的数据:', parts);
+                
+                // 动态映射到表头
+                if (tableStructure.headers.length > 0) {
+                    row[tableStructure.headers[0]] = number; // 序号
+                    
+                    for (let i = 1; i < tableStructure.headers.length && i - 1 < parts.length; i++) {
+                        row[tableStructure.headers[i]] = parts[i - 1] || '';
+                    }
+                }
+                
+                console.log('🔍 [DEBUG] 解析后的行数据:', row);
+                
+                if (Object.keys(row).length > 0) {
+                    rows.push(row);
+                }
+            });
+        }
+        
+        console.log('🔍 [DEBUG] 最终解析的行数:', rows.length);
+        return rows;
+    }
+
+    /**
+     * 智能分割表格数据
+     * @param {string} dataPart 数据部分
+     * @returns {Array} 分割后的数据
+     */
+    splitTableDataIntelligently(dataPart) {
+        const parts = [];
+        let currentPart = '';
+        let i = 0;
+        
+        while (i < dataPart.length) {
+            const char = dataPart[i];
+            
+            // 检测列分隔符（多个空格）
+            if (char === ' ' && i + 1 < dataPart.length && dataPart[i + 1] === ' ') {
+                if (currentPart.trim()) {
+                    parts.push(currentPart.trim());
+                    currentPart = '';
+                }
+                // 跳过多个空格
+                while (i < dataPart.length && dataPart[i] === ' ') {
+                    i++;
+                }
+                continue;
+            }
+            
+            currentPart += char;
+            i++;
+        }
+        
+        // 添加最后一个部分
+        if (currentPart.trim()) {
+            parts.push(currentPart.trim());
+        }
+        
+        return parts;
+    }
+
+    /**
+     * 解析单行表格数据
+     * @param {string} line 单行文本
+     * @param {Object} tableStructure 表格结构信息
+     * @returns {Object} 解析后的行数据
+     */
+    parseTableRow(line, tableStructure) {
+        const row = {};
+        
+        // 移除行首的数字序号（如果存在）
+        const cleanLine = line.replace(/^\d+[\.\s]+/, '');
+        
+        // 根据分隔符分割数据
+        const parts = this.splitTableRow(cleanLine);
+        
+        // 将数据映射到表头
+        tableStructure.headers.forEach((header, index) => {
+            row[header] = parts[index] || '';
+        });
+        
+        return row;
+    }
+
+    /**
+     * 智能分割表格行
+     * @param {string} line 表格行文本
+     * @returns {Array} 分割后的数据
+     */
+    splitTableRow(line) {
+        // 尝试多种分割方式
+        let parts = [];
+        
+        // 1. 尝试按多个空格分割
+        parts = line.split(/\s{2,}/);
+        if (parts.length > 1) {
+            return parts.map(part => part.trim());
+        }
+        
+        // 2. 尝试按制表符分割
+        parts = line.split(/\t/);
+        if (parts.length > 1) {
+            return parts.map(part => part.trim());
+        }
+        
+        // 3. 尝试按单个空格分割，但合并短词
+        parts = line.split(/\s+/);
+        const mergedParts = [];
+        let currentPart = '';
+        
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (part.length <= 2 && i < parts.length - 1) {
+                // 短词可能与下一个词合并
+                currentPart += (currentPart ? ' ' : '') + part;
+            } else {
+                currentPart += (currentPart ? ' ' : '') + part;
+                mergedParts.push(currentPart.trim());
+                currentPart = '';
+            }
+        }
+        
+        if (currentPart) {
+            mergedParts.push(currentPart.trim());
+        }
+        
+        return mergedParts;
+    }
+
+    /**
+     * 智能分段处理
+     * @param {string} text 文本内容
+     * @returns {Array} 分段后的数组
+     */
+    splitIntelligentParagraphs(text) {
+        // 首先按双换行分割
+        let paragraphs = text.split(/\n\s*\n/);
+        
+        // 如果没有明显的段落分隔，尝试按单换行分割
+        if (paragraphs.length <= 1) {
+            paragraphs = text.split(/\n/);
+        }
+        
+        // 如果还是没有分段，尝试按数字序号分割
+        if (paragraphs.length <= 1) {
+            paragraphs = this.splitByNumberedItems(text);
+        }
+        
+        // 过滤空段落并清理
+        return paragraphs
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+    }
+
+    /**
+     * 按数字序号分割文本
+     * @param {string} text 文本内容
+     * @returns {Array} 分割后的段落
+     */
+    splitByNumberedItems(text) {
+        const paragraphs = [];
+        const matches = text.match(/\d+[\.\s]+[^0-9]+/g);
+        
+        if (matches) {
+            matches.forEach(match => {
+                paragraphs.push(match.trim());
+            });
+        } else {
+            // 如果没有找到数字序号，按空格分割长文本
+            const words = text.split(/\s+/);
+            const chunkSize = Math.ceil(words.length / 3);
+            
+            for (let i = 0; i < words.length; i += chunkSize) {
+                const chunk = words.slice(i, i + chunkSize).join(' ');
+                if (chunk.trim()) {
+                    paragraphs.push(chunk);
+                }
+            }
+        }
+        
+        return paragraphs;
+    }
+
+    /**
+     * 检测是否为列表项
+     * @param {string} text 文本内容
+     * @returns {boolean} 是否为列表项
+     */
+    isListItem(text) {
+        return /^[\s]*[-*•]\s/.test(text) || /^[\s]*\d+\.\s/.test(text);
+    }
+
+    /**
+     * 处理列表项
+     * @param {string} text 列表项文本
+     * @returns {string} 处理后的HTML
+     */
+    processListItem(text) {
+        let processed = this.escapeHtml(text);
+        
+        // 处理无序列表
+        if (/^[\s]*[-*•]\s/.test(processed)) {
+            processed = processed.replace(/^[\s]*[-*•]\s/, '• ');
+            return `<div style="margin: 0.3em 0;">${processed}</div>`;
+        }
+        
+        // 处理有序列表
+        if (/^[\s]*\d+\.\s/.test(processed)) {
+            return `<div style="margin: 0.3em 0;">${processed}</div>`;
+        }
+        
+        return processed;
+    }
+
+    /**
+     * 提取文档标题
+     * @param {string} titleLine 标题行文本
+     * @returns {string} 提取的标题
+     */
+    extractDocumentTitle(titleLine) {
+        // 常见的标题模式
+        const titlePatterns = [
+            /^(.+?)(?:报检单号|单号|编号|NO\.|No\.|no\.)/i,
+            /^(.+?)(?:清单|列表|表格|表|报告|报表)/,
+            /^(.+?)(?:\s*$)/  // 如果前面都不匹配，取整行作为标题
+        ];
+        
+        for (const pattern of titlePatterns) {
+            const match = titleLine.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+        
+        return titleLine.trim();
+    }
+
+    /**
+     * 分析表格结构
+     * @param {string} text 表格文本
+     * @returns {Object} 表格结构信息
+     */
+    analyzeTableStructure(text) {
+        const lines = text.split(/\n/).filter(line => line.trim().length > 0);
+        const headers = [];
+        
+        if (lines.length > 1) {
+            // 基于格式分析表头，而不是内容
+            const headerLine = this.findHeaderLine(lines);
+            const headerParts = this.splitTableRow(headerLine);
+            
+            // 根据列的位置和格式特征生成表头
+            headerParts.forEach((part, index) => {
+                const header = this.generateHeaderByPosition(part, index, headerParts.length);
+                headers.push(header);
+            });
+        } else if (lines.length === 1) {
+            // 处理单行表格 - 从文本中提取表头
+            const extractedHeaders = this.extractHeadersFromSingleLine(text);
+            if (extractedHeaders.length > 0) {
+                headers.push(...extractedHeaders);
+            } else {
+                // 动态生成表头，基于数据列数
+                const columnCount = this.estimateColumnCount(text);
+                headers.push('序号');
+                for (let i = 1; i < columnCount; i++) {
+                    headers.push(`列${i}`);
+                }
+            }
+        }
+        
+        return { headers };
+    }
+
+    /**
+     * 估算列数
+     * @param {string} text 文本内容
+     * @returns {number} 估算的列数
+     */
+    estimateColumnCount(text) {
+        // 基于数据行估算列数
+        const dataMatches = text.match(/\d+\s+[^0-9]+?(?=\d+\s|$)/g);
+        if (dataMatches && dataMatches.length > 0) {
+            // 分析第一行数据来估算列数
+            const firstDataRow = dataMatches[0];
+            const dataPart = firstDataRow.replace(/^\d+\s+/, '');
+            const parts = this.splitTableDataIntelligently(dataPart);
+            return parts.length + 1; // +1 for 序号列
+        }
+        return 4; // 默认4列
+    }
+
+    /**
+     * 从单行文本中提取表头
+     * @param {string} text 文本内容
+     * @returns {Array} 提取的表头
+     */
+    extractHeadersFromSingleLine(text) {
+        const headers = [];
+        
+        // 查找表头行（通常在数字序号之前）
+        const headerMatch = text.match(/序号\s+品名\s+原产地\/地区\s+规格\s+报检数\/重量\s+生产日期\s+保质期/);
+        if (headerMatch) {
+            return ['序号', '品名', '原产地/地区', '规格', '报检数/重量', '生产日期', '保质期'];
+        }
+        
+        // 查找其他常见的表头模式
+        const patterns = [
+            /序号\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/,
+            /序号\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/,
+            /序号\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match) {
+                headers.push('序号');
+                for (let i = 1; i < match.length; i++) {
+                    headers.push(match[i]);
+                }
+                return headers;
+            }
+        }
+        
+        return headers;
+    }
+
+    /**
+     * 查找表头行
+     * @param {Array} lines 所有行
+     * @returns {string} 表头行
+     */
+    findHeaderLine(lines) {
+        // 跳过第一行（通常是标题）
+        const dataLines = lines.slice(1);
+        
+        // 查找最可能的表头行
+        for (let i = 0; i < Math.min(3, dataLines.length); i++) {
+            const line = dataLines[i];
+            const parts = this.splitTableRow(line);
+            
+            // 表头行通常具有以下特征：
+            // 1. 不包含数字序号
+            // 2. 列数适中（3-8列）
+            // 3. 每列内容较短
+            const hasNoNumbers = !/\d+/.test(line);
+            const hasReasonableColumns = parts.length >= 3 && parts.length <= 8;
+            const hasShortContent = parts.every(part => part.length <= 10);
+            
+            if (hasNoNumbers && hasReasonableColumns && hasShortContent) {
+                return line;
+            }
+        }
+        
+        // 如果没找到合适的表头行，返回第二行
+        return dataLines[0] || '';
+    }
+
+    /**
+     * 根据位置和格式生成表头
+     * @param {string} content 列内容
+     * @param {number} index 列索引
+     * @param {number} totalColumns 总列数
+     * @returns {string} 生成的表头
+     */
+    generateHeaderByPosition(content, index, totalColumns) {
+        // 基于位置和内容特征生成表头
+        const trimmedContent = content.trim();
+        
+        // 如果内容看起来像表头，直接使用
+        if (trimmedContent && trimmedContent.length <= 10) {
+            return trimmedContent || `列${index + 1}`;
+        }
+        
+        // 根据位置推断表头类型
+        if (index === 0) {
+            return '序号';
+        } else if (index === 1) {
+            return '名称';
+        } else if (index === totalColumns - 1) {
+            return '备注';
+        } else {
+            return `列${index + 1}`;
+        }
+    }
+
+    /**
+     * 获取最常见的值
+     * @param {Array} array 数组
+     * @returns {*} 最常见的值
+     */
+    getMostCommonValue(array) {
+        const counts = {};
+        let maxCount = 0;
+        let mostCommon = array[0];
+        
+        array.forEach(item => {
+            counts[item] = (counts[item] || 0) + 1;
+            if (counts[item] > maxCount) {
+                maxCount = counts[item];
+                mostCommon = item;
+            }
+        });
+        
+        return mostCommon;
+    }
+
+    /**
+     * 获取列对齐方式
+     * @param {string} header 表头
+     * @returns {string} 对齐方式
+     */
+    getColumnAlignment(header) {
+        // 基于表头内容特征判断对齐方式
+        const headerLower = header.toLowerCase();
+        
+        // 数字类列居中对齐
+        if (/^\d+$/.test(header) || headerLower.includes('序号') || headerLower.includes('编号') || 
+            headerLower.includes('数量') || headerLower.includes('重量') || headerLower.includes('金额') ||
+            headerLower.includes('价格') || headerLower.includes('日期') || headerLower.includes('时间')) {
+            return 'center';
+        }
+        
+        // 文本类列左对齐
+        if (headerLower.includes('名称') || headerLower.includes('品名') || headerLower.includes('内容') ||
+            headerLower.includes('规格') || headerLower.includes('备注') || headerLower.includes('说明')) {
+            return 'left';
+        }
+        
+        // 默认居中对齐
+        return 'center';
+    }
+
+    /**
+     * HTML转义
+     * @param {string} text 原始文本
+     * @returns {string} 转义后的文本
+     */
+    escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 
     /**
@@ -1454,7 +2330,7 @@ class FilePreview {
                 case 'doc':
                 case 'docx':
                     console.log('🔍 [DEBUG] 处理Word文件');
-                    return await this.previewWord(buffer);
+                    return await this.previewWord(buffer, ext);
                 case 'ppt':
                 case 'pptx':
                     console.log('🔍 [DEBUG] 处理PowerPoint文件');
