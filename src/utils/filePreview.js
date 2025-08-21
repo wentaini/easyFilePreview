@@ -617,12 +617,10 @@ class FilePreview {
                 }
                 currentSection = line;
                 markdown += `### ${line}\n\n`;
-                markdown += '| 字段 | 值 |\n';
-                markdown += '| --- | --- |\n';
                 continue;
             }
             
-            // 处理键值对
+            // 处理键值对 - 直接转换为表格行，不添加表头
             const fieldMatch = line.match(/^(.+?):\s*(.+)$/);
             if (fieldMatch) {
                 const key = fieldMatch[1].trim();
