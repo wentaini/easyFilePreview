@@ -44,7 +44,7 @@ app.use(sqlInjectionDefense);
 const corsOptions = {
     // 【1】指定允许的源
     // 开发环境调试可以设为 '*'
-    // 生产环境建议只允许特定域名，如：origin: ['https://www.vtopideal.com']
+    // 生产环境建议只允许特定域名，如：origin: ['https://www.****.com']
     origin: '*',
   
     // 【2】指定允许的请求方法
