@@ -871,9 +871,25 @@ class FilePreview {
             }
         }
         
-        // 转义Markdown特殊字符（排除表格行）
+        // 转义Markdown特殊字符（排除表格行和标题）
         let processedText = processedLines.join('\n');
-        processedText = processedText.replace(/([\\`*_{}\[\]()#+\-!])/g, '\\$1');
+        
+        // 保护Markdown标题，避免转义
+        const titleMatches = [];
+        processedText = processedText.replace(/^(#{1,6})\s+(.+)$/gm, (match, hashes, content) => {
+            titleMatches.push({ match, hashes, content });
+            return `TITLE_PLACEHOLDER_${titleMatches.length - 1}`;
+        });
+        
+        // 转义其他特殊字符
+        processedText = processedText.replace(/([\\`*_{}\[\]()+\-!])/g, '\\$1');
+        
+        // 恢复标题（不转义#符号）
+        titleMatches.forEach((titleMatch, index) => {
+            const placeholder = `TITLE_PLACEHOLDER_${index}`;
+            const escapedPlaceholder = `TITLE\\_PLACEHOLDER\\_${index}`;
+            processedText = processedText.replace(escapedPlaceholder, titleMatch.match);
+        });
         
         // 处理URL
         processedText = processedText.replace(/(https?:\/\/[^\s]+)/g, '<$1>');
