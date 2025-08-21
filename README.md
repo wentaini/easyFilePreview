@@ -174,10 +174,10 @@ easyfilePreview/
 ## 技术栈
 
 ### 前端
-- **Tailwind CSS**: 现代化CSS框架
-- **Vue.js**: 渐进式JavaScript框架
-- **Chart.js**: 图表库
-- **Marked**: Markdown解析器
+- **Tailwind CSS**: 现代化CSS框架 (本地: ./js/tailwindcss.js)
+- **Vue.js**: 渐进式JavaScript框架 (本地: ./js/vue.global.js)
+- **Chart.js**: 图表库 (本地: ./js/chart.js)
+- **Marked**: Markdown解析器 (本地: ./js/marked.min.js)
 
 ### 后端
 - **Node.js**: JavaScript运行时

@@ -246,25 +246,25 @@
                 <name>TailwindCSS</name>
                 <version>最新版</version>
                 <purpose>UI框架</purpose>
-                <cdn>https://oss.vtopideal.com/prod/static/js/tailwindcss.js</cdn>
+                <cdn>./js/tailwindcss.js</cdn>
             </technology>
             <technology>
                 <name>Vue.js</name>
                 <version>3.x</version>
                 <purpose>MVVM框架</purpose>
-                <cdn>https://oss.vtopideal.com/prod/static/js/vue.global.js</cdn>
+                <cdn>./js/vue.global.js</cdn>
             </technology>
             <technology>
                 <name>Chart.js</name>
                 <version>最新版</version>
                 <purpose>图表展示</purpose>
-                <cdn>https://oss.vtopideal.com/prod/static/js/chart.js</cdn>
+                <cdn>./js/chart.js</cdn>
             </technology>
             <technology>
                 <name>Marked.js</name>
                 <version>最新版</version>
                 <purpose>Markdown渲染</purpose>
-                <cdn>https://oss.vtopideal.com/prod/static/js/marked.min.js</cdn>
+                <cdn>./js/marked.min.js</cdn>
             </technology>
         </frontend>
 

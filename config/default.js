@@ -40,8 +40,8 @@ module.exports = {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://oss.vtopideal.com"],
-          scriptSrc: ["'self'", "https://oss.vtopideal.com"],
+                  styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
           imgSrc: ["'self'", "data:", "https:"],
           connectSrc: ["'self'"]
         }
