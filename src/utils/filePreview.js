@@ -205,6 +205,695 @@ class FilePreview {
     }
 
     /**
+     * 提取PDF文本内容（按页返回）
+     * @param {string} url 文件URL
+     * @returns {Object} PDF文本信息
+     */
+    async extractPdfText(url) {
+        try {
+            console.log('🔍 [DEBUG] extractPdfText 开始执行');
+            console.log('🔍 [DEBUG] URL:', url);
+            
+            // 下载文件
+            console.log('🔍 [DEBUG] 开始下载PDF文件');
+            const buffer = await this.downloadFile(url);
+            console.log('🔍 [DEBUG] PDF文件下载完成，大小:', buffer.length, '字节');
+            
+            const fileSize = buffer.length;
+            const fileSizeMB = (fileSize / 1024 / 1024).toFixed(1);
+            
+            // 使用pdf-parse提取文本内容
+            console.log('🔍 [DEBUG] 开始解析PDF文本');
+            const pdfParse = require('pdf-parse');
+            const pdfData = await pdfParse(buffer);
+            
+            console.log('🔍 [DEBUG] PDF解析完成');
+            console.log('🔍 [DEBUG] 页面数量:', pdfData.numpages);
+            console.log('🔍 [DEBUG] 文本长度:', pdfData.text ? pdfData.text.length : 0);
+            
+            // 按页分割文本内容
+            const pages = this.splitPdfTextByPages(pdfData.text, pdfData.numpages);
+            
+            // 转换为Markdown格式
+            const markdownText = this.convertTextToMarkdown(pdfData.text);
+            const markdownPages = pages.map(page => ({
+                ...page,
+                markdown: this.convertTextToMarkdown(page.text)
+            }));
+
+            const result = {
+                text: pdfData.text || '', // 保留完整文本
+                markdown: markdownText, // Markdown格式的完整文本
+                pages: pages, // 按页分割的文本数组
+                markdownPages: markdownPages, // 按页分割的Markdown数组
+                pageCount: pdfData.numpages || 0,
+                hasText: pdfData.text && pdfData.text.trim().length > 0,
+                fileSize: fileSizeMB,
+                info: pdfData.info || {},
+                metadata: pdfData.metadata || {},
+                version: pdfData.version || '',
+                textLength: pdfData.text ? pdfData.text.length : 0
+            };
+            
+            console.log('🔍 [DEBUG] PDF文本提取成功，页面数:', pages.length);
+            return result;
+            
+        } catch (error) {
+            console.log('🔍 [DEBUG] PDF文本提取失败:', error.message);
+            throw new Error(`PDF文本提取失败: ${error.message}`);
+        }
+    }
+
+    /**
+     * 按页分割PDF文本内容
+     * @param {string} text 完整文本内容
+     * @param {number} pageCount 页面数量
+     * @returns {Array} 按页分割的文本数组
+     */
+    splitPdfTextByPages(text, pageCount) {
+        if (!text || !pageCount || pageCount <= 0) {
+            return [];
+        }
+
+        const pages = [];
+        const lines = text.split('\n');
+        let currentPage = [];
+        let pageIndex = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 检测页面分隔符（常见的PDF页面分隔模式）
+            if (this.isPageSeparator(line, i, lines)) {
+                if (currentPage.length > 0) {
+                    pages.push({
+                        pageNumber: pageIndex + 1,
+                        text: currentPage.join('\n').trim(),
+                        lineCount: currentPage.length
+                    });
+                    pageIndex++;
+                    currentPage = [];
+                }
+            } else {
+                currentPage.push(line);
+            }
+        }
+
+        // 添加最后一页
+        if (currentPage.length > 0) {
+            pages.push({
+                pageNumber: pageIndex + 1,
+                text: currentPage.join('\n').trim(),
+                lineCount: currentPage.length
+            });
+        }
+
+        // 如果检测到的页面数与实际页面数不匹配，使用简单分割
+        if (pages.length !== pageCount) {
+            console.log('🔍 [DEBUG] 页面分割不匹配，使用简单分割方法');
+            return this.simpleSplitByPages(text, pageCount);
+        }
+
+        return pages;
+    }
+
+    /**
+     * 检测是否为页面分隔符
+     * @param {string} line 当前行
+     * @param {number} lineIndex 行索引
+     * @param {Array} allLines 所有行
+     * @returns {boolean} 是否为页面分隔符
+     */
+    isPageSeparator(line, lineIndex, allLines) {
+        // 检测页码模式
+        const pageNumberPatterns = [
+            /^\d+$/, // 纯数字
+            /^第\s*\d+\s*页$/, // 第X页
+            /^Page\s*\d+$/i, // Page X
+            /^\d+\s*\/\s*\d+$/, // X/Y
+            /^-\s*\d+\s*-$/, // - X -
+            /^第\s*\d+\s*页\s*共\s*\d+\s*页$/, // 第X页共Y页
+        ];
+
+        // 检查当前行是否匹配页码模式
+        for (const pattern of pageNumberPatterns) {
+            if (pattern.test(line)) {
+                return true;
+            }
+        }
+
+        // 检测页面分隔特征
+        // 1. 连续的空行
+        if (line === '' && lineIndex > 0 && lineIndex < allLines.length - 1) {
+            const prevLine = allLines[lineIndex - 1].trim();
+            const nextLine = allLines[lineIndex + 1].trim();
+            
+            // 如果前后都有内容，且当前行为空，可能是页面分隔
+            if (prevLine !== '' && nextLine !== '') {
+                return true;
+            }
+        }
+
+        // 2. 检测特殊的页面分隔符
+        const separatorPatterns = [
+            /^={3,}$/, // 连续等号
+            /^-{3,}$/, // 连续横线
+            /^\*{3,}$/, // 连续星号
+            /^_+$/, // 连续下划线
+        ];
+
+        for (const pattern of separatorPatterns) {
+            if (pattern.test(line)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 简单按页分割文本（备用方法）
+     * @param {string} text 完整文本
+     * @param {number} pageCount 页面数量
+     * @returns {Array} 按页分割的文本数组
+     */
+    simpleSplitByPages(text, pageCount) {
+        if (!text || !pageCount || pageCount <= 0) {
+            return [];
+        }
+
+        const pages = [];
+        const lines = text.split('\n').filter(line => line.trim() !== '');
+        const linesPerPage = Math.ceil(lines.length / pageCount);
+
+        for (let i = 0; i < pageCount; i++) {
+            const startIndex = i * linesPerPage;
+            const endIndex = Math.min((i + 1) * linesPerPage, lines.length);
+            const pageLines = lines.slice(startIndex, endIndex);
+
+            pages.push({
+                pageNumber: i + 1,
+                text: pageLines.join('\n').trim(),
+                lineCount: pageLines.length
+            });
+        }
+
+        return pages;
+    }
+
+    /**
+     * 将文本转换为Markdown格式
+     * @param {string} text 原始文本
+     * @returns {string} Markdown格式的文本
+     */
+    convertTextToMarkdown(text) {
+        if (!text || typeof text !== 'string') {
+            return '';
+        }
+
+        let markdown = text;
+        const lines = text.split('\n');
+
+        // 处理标题
+        markdown = this.processMarkdownHeadings(markdown);
+
+        // 处理列表
+        markdown = this.processMarkdownLists(markdown);
+
+        // 处理表格
+        markdown = this.processMarkdownTables(markdown);
+
+        // 处理强调文本
+        markdown = this.processMarkdownEmphasis(markdown);
+
+        // 处理段落和换行
+        markdown = this.processMarkdownParagraphs(markdown);
+
+        // 处理特殊字符
+        markdown = this.processMarkdownSpecialChars(markdown);
+
+        return markdown;
+    }
+
+    /**
+     * 处理Markdown标题
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownHeadings(text) {
+        const lines = text.split('\n');
+        const processedLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 检测标题（基于长度、大写字母比例、位置等）
+            if (this.isHeading(line, i, lines)) {
+                // 根据标题级别添加不同数量的#
+                const level = this.getHeadingLevel(line);
+                const headingText = line.replace(/^[0-9]+\.?\s*/, ''); // 移除数字编号
+                processedLines.push(`${'#'.repeat(level)} ${headingText}`);
+            } else {
+                processedLines.push(line);
+            }
+        }
+
+        return processedLines.join('\n');
+    }
+
+    /**
+     * 获取标题级别
+     * @param {string} line 标题行
+     * @returns {number} 标题级别 (1-6)
+     */
+    getHeadingLevel(line) {
+        const length = line.length;
+        const upperCaseCount = (line.match(/[A-Z]/g) || []).length;
+        const upperCaseRatio = upperCaseCount / length;
+
+        // 根据特征判断标题级别
+        if (length < 30 && upperCaseRatio > 0.5) {
+            return 1; // 主标题
+        } else if (length < 50 && upperCaseRatio > 0.3) {
+            return 2; // 二级标题
+        } else if (length < 80 && upperCaseRatio > 0.2) {
+            return 3; // 三级标题
+        } else if (/^\d+\./.test(line)) {
+            return 4; // 编号标题
+        } else {
+            return 5; // 小标题
+        }
+    }
+
+    /**
+     * 处理Markdown列表
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownLists(text) {
+        const lines = text.split('\n');
+        const processedLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 处理无序列表
+            if (/^[-*•]\s/.test(line)) {
+                processedLines.push(line.replace(/^[-*•]\s/, '- '));
+            }
+            // 处理有序列表
+            else if (/^\d+\.\s/.test(line)) {
+                processedLines.push(line); // 保持原样
+            }
+            // 处理缩进列表
+            else if (/^\s+[-*•]\s/.test(line)) {
+                const indentLevel = line.match(/^\s+/)[0].length;
+                const indent = '  '.repeat(Math.floor(indentLevel / 2));
+                processedLines.push(indent + line.replace(/^\s+[-*•]\s/, '- '));
+            }
+            else {
+                processedLines.push(line);
+            }
+        }
+
+        return processedLines.join('\n');
+    }
+
+    /**
+     * 处理Markdown表格
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownTables(text) {
+        // 检测表格结构
+        if (this.isTableData(text)) {
+            return this.convertTableToMarkdown(text);
+        }
+        return text;
+    }
+
+    /**
+     * 将表格转换为Markdown格式
+     * @param {string} text 表格文本
+     * @returns {string} Markdown表格
+     */
+    convertTableToMarkdown(text) {
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length < 2) return text;
+
+        // 检测表格类型并选择合适的转换方法
+        const tableType = this.detectTableType(lines);
+        
+        switch (tableType) {
+            case 'keyValue':
+                return this.convertKeyValueToMarkdown(lines);
+            case 'structured':
+                return this.convertStructuredToMarkdown(lines);
+            case 'aligned':
+                return this.convertAlignedToMarkdown(lines);
+            case 'standard':
+            default:
+                return this.convertStandardToMarkdown(lines);
+        }
+    }
+
+    /**
+     * 检测表格类型
+     * @param {Array} lines 文本行数组
+     * @returns {string} 表格类型
+     */
+    detectTableType(lines) {
+        // 检测键值对格式
+        const hasKeyValuePairs = lines.some(line => line.match(/^(.+?):\s*(.+)$/));
+        if (hasKeyValuePairs) {
+            return 'keyValue';
+        }
+        
+        // 检测结构化数据（有规律的列分隔）
+        const hasStructuredData = this.detectAlignedColumns(lines);
+        if (hasStructuredData) {
+            return 'aligned';
+        }
+        
+        // 检测标准表格格式
+        const hasStandardFormat = lines.some(line => {
+            const parts = line.trim().split(/\s{2,}/);
+            return parts.length >= 2;
+        });
+        if (hasStandardFormat) {
+            return 'standard';
+        }
+        
+        return 'structured';
+    }
+
+    /**
+     * 检测是否为银行回单格式
+     * @param {Array} lines 文本行数组
+     * @returns {boolean} 是否为银行回单格式
+     */
+    isBankReceiptFormat(lines) {
+        return lines.some(line => 
+            line.includes('银行') && (line.includes('回单') || line.includes('收付款'))
+        );
+    }
+
+    /**
+     * 转换键值对格式为Markdown表格
+     * @param {Array} lines 文本行数组
+     * @returns {string} Markdown表格
+     */
+    convertKeyValueToMarkdown(lines) {
+        let markdown = '';
+        let currentSection = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 检测新的段落或标题
+            if (line.length > 0 && !line.includes(':') && !line.match(/^\d+/) && !line.includes('¥') && !line.includes('元')) {
+                if (currentSection) {
+                    markdown += '\n';
+                }
+                currentSection = line;
+                markdown += `### ${line}\n\n`;
+                markdown += '| 字段 | 值 |\n';
+                markdown += '| --- | --- |\n';
+                continue;
+            }
+            
+            // 处理键值对
+            const fieldMatch = line.match(/^(.+?):\s*(.+)$/);
+            if (fieldMatch) {
+                const key = fieldMatch[1].trim();
+                const value = fieldMatch[2].trim();
+                markdown += `| ${key} | ${value} |\n`;
+            } else if (line.includes('¥') || line.includes('元')) {
+                // 金额字段
+                markdown += `| 金额 | ${line} |\n`;
+            } else if (line.match(/^\d{4}-\d{2}-\d{2}/)) {
+                // 日期字段
+                markdown += `| 日期 | ${line} |\n`;
+            } else if (line.match(/^\d{16,19}$/)) {
+                // 账号字段
+                markdown += `| 账号 | ${line} |\n`;
+            } else if (line.trim().length > 0) {
+                // 其他数据字段
+                markdown += `| 数据 | ${line} |\n`;
+            }
+        }
+        
+        return markdown;
+    }
+
+    /**
+     * 转换对齐格式为Markdown表格
+     * @param {Array} lines 文本行数组
+     * @returns {string} Markdown表格
+     */
+    convertAlignedToMarkdown(lines) {
+        let markdown = '';
+        
+        // 处理表头
+        const headerLine = lines[0];
+        const headers = this.splitTableRow(headerLine);
+        markdown += '| ' + headers.join(' | ') + ' |\n';
+        markdown += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+
+        // 处理数据行
+        for (let i = 1; i < lines.length; i++) {
+            const row = this.splitTableRow(lines[i]);
+            markdown += '| ' + row.join(' | ') + ' |\n';
+        }
+
+        return markdown;
+    }
+
+    /**
+     * 转换标准格式为Markdown表格
+     * @param {Array} lines 文本行数组
+     * @returns {string} Markdown表格
+     */
+    convertStandardToMarkdown(lines) {
+        let markdown = '';
+        
+        // 处理表头
+        const headerLine = lines[0];
+        const headers = this.splitTableRow(headerLine);
+        markdown += '| ' + headers.join(' | ') + ' |\n';
+        markdown += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+
+        // 处理数据行
+        for (let i = 1; i < lines.length; i++) {
+            const row = this.splitTableRow(lines[i]);
+            markdown += '| ' + row.join(' | ') + ' |\n';
+        }
+
+        return markdown;
+    }
+
+    /**
+     * 转换结构化数据为Markdown表格
+     * @param {Array} lines 文本行数组
+     * @returns {string} Markdown表格
+     */
+    convertStructuredToMarkdown(lines) {
+        let markdown = '';
+        
+        // 尝试识别表头和数据
+        const columnCounts = lines.map(line => {
+            const parts = line.trim().split(/\s{2,}/);
+            return parts.length;
+        });
+        
+        const mostCommonColumnCount = this.getMostCommonValue(columnCounts);
+        
+        // 如果列数一致，按标准表格处理
+        if (columnCounts.filter(count => count === mostCommonColumnCount).length >= Math.floor(lines.length * 0.6)) {
+            return this.convertStandardToMarkdown(lines);
+        }
+        
+        // 否则按键值对处理
+        return this.convertKeyValueToMarkdown(lines);
+    }
+
+    /**
+     * 将银行回单转换为Markdown表格
+     * @param {Array} lines 文本行数组
+     * @returns {string} Markdown表格
+     */
+    convertBankReceiptToMarkdown(lines) {
+        const receipts = [];
+        let currentReceipt = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // 检测回单标题
+            if (line.includes('银行') && (line.includes('回单') || line.includes('收付款'))) {
+                if (currentReceipt) {
+                    receipts.push(currentReceipt);
+                }
+                currentReceipt = {
+                    title: line,
+                    fields: []
+                };
+                continue;
+            }
+            
+            if (currentReceipt) {
+                // 检测字段对（键值对）
+                const fieldMatch = line.match(/^(.+?):\s*(.+)$/);
+                if (fieldMatch) {
+                    currentReceipt.fields.push({
+                        key: fieldMatch[1].trim(),
+                        value: fieldMatch[2].trim()
+                    });
+                } else if (line.includes('¥') || line.includes('元')) {
+                    // 金额字段
+                    currentReceipt.fields.push({
+                        key: '金额',
+                        value: line
+                    });
+                } else if (line.match(/^\d{4}-\d{2}-\d{2}/)) {
+                    // 日期字段
+                    currentReceipt.fields.push({
+                        key: '日期',
+                        value: line
+                    });
+                } else if (line.match(/^\d{16,19}$/)) {
+                    // 账号字段
+                    currentReceipt.fields.push({
+                        key: '账号',
+                        value: line
+                    });
+                }
+            }
+        }
+        
+        if (currentReceipt) {
+            receipts.push(currentReceipt);
+        }
+        
+        // 转换为Markdown表格
+        let markdown = '';
+        
+        receipts.forEach((receipt, index) => {
+            markdown += `### ${receipt.title}\n\n`;
+            markdown += '| 字段 | 值 |\n';
+            markdown += '| --- | --- |\n';
+            
+            receipt.fields.forEach(field => {
+                markdown += `| ${field.key} | ${field.value} |\n`;
+            });
+            
+            markdown += '\n';
+        });
+        
+        return markdown;
+    }
+
+    /**
+     * 处理Markdown强调文本
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownEmphasis(text) {
+        // 处理粗体文本（用**包围的文本）
+        text = text.replace(/\*\*(.*?)\*\*/g, '**$1**');
+        
+        // 处理斜体文本（用*包围的文本）
+        text = text.replace(/\*(.*?)\*/g, '*$1*');
+        
+        // 处理下划线文本（用__包围的文本）
+        text = text.replace(/__(.*?)__/g, '**$1**');
+        
+        // 处理重要文本（全大写或包含关键词）
+        text = text.replace(/\b(重要|注意|警告|错误|成功)\b/g, '**$1**');
+        
+        return text;
+    }
+
+    /**
+     * 处理Markdown段落和换行
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownParagraphs(text) {
+        const lines = text.split('\n');
+        const processedLines = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            if (line === '') {
+                // 空行保持空行
+                processedLines.push('');
+            } else if (line.startsWith('#')) {
+                // 标题行前添加空行
+                if (i > 0 && lines[i - 1].trim() !== '') {
+                    processedLines.push('');
+                }
+                processedLines.push(line);
+            } else if (line.startsWith('|')) {
+                // 表格行
+                processedLines.push(line);
+            } else if (line.startsWith('-') || /^\d+\./.test(line)) {
+                // 列表项
+                processedLines.push(line);
+            } else {
+                // 普通段落
+                processedLines.push(line);
+            }
+        }
+
+        return processedLines.join('\n');
+    }
+
+    /**
+     * 处理Markdown特殊字符
+     * @param {string} text 文本内容
+     * @returns {string} 处理后的文本
+     */
+    processMarkdownSpecialChars(text) {
+        // 保护表格行，避免转义表格分隔符
+        const tableLines = [];
+        const lines = text.split('\n');
+        const processedLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('|') || line.includes('| --- |')) {
+                // 保护表格行，不进行特殊字符转义
+                tableLines.push(line);
+                // 使用不会被转义的占位符格式
+                processedLines.push(`TABLE_PLACEHOLDER_${tableLines.length - 1}`);
+            } else {
+                processedLines.push(line);
+            }
+        }
+        
+        // 转义Markdown特殊字符（排除表格行）
+        let processedText = processedLines.join('\n');
+        processedText = processedText.replace(/([\\`*_{}\[\]()#+\-!])/g, '\\$1');
+        
+        // 处理URL
+        processedText = processedText.replace(/(https?:\/\/[^\s]+)/g, '<$1>');
+        
+        // 处理邮箱
+        processedText = processedText.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g, '<$1>');
+        
+        // 恢复表格行
+        tableLines.forEach((tableLine, index) => {
+            const placeholder = `TABLE_PLACEHOLDER_${index}`;
+            const escapedPlaceholder = `TABLE\\_PLACEHOLDER\\_${index}`;
+            processedText = processedText.replace(escapedPlaceholder, tableLine);
+        });
+        
+        return processedText;
+    }
+
+    /**
      * 预览PDF文件
      * @param {Buffer} buffer 文件内容
      * @returns {Object} 预览信息
@@ -728,7 +1417,7 @@ class FilePreview {
      * @returns {boolean} 是否为表格数据
      */
     isTableData(text) {
-        // 基于格式特征检测表格，而不是内容关键词
+        // 通用的表格检测方法，基于格式特征而非内容
         const lines = text.split(/\n/).filter(line => line.trim().length > 0);
         
         // 如果只有一行，尝试检测是否包含表格特征
@@ -743,7 +1432,11 @@ class FilePreview {
             hasConsistentColumns: false,
             hasNumberedRows: false,
             hasTabularStructure: false,
-            hasMultipleDataRows: false
+            hasMultipleDataRows: false,
+            hasKeyValuePairs: false,
+            hasStructuredData: false,
+            hasTableSeparators: false,
+            hasAlignedData: false
         };
         
         // 1. 检测是否有编号行
@@ -759,15 +1452,50 @@ class FilePreview {
         // 如果大部分行都有相同的列数，说明有表格结构
         const mostCommonColumnCount = this.getMostCommonValue(columnCounts);
         formatFeatures.hasConsistentColumns = columnCounts.filter(count => count === mostCommonColumnCount).length >= Math.floor(lines.length * 0.6);
-        formatFeatures.hasTabularStructure = mostCommonColumnCount >= 3;
+        formatFeatures.hasTabularStructure = mostCommonColumnCount >= 2; // 降低要求，支持2列以上的表格
         
         // 3. 检测是否有多个数据行
-        formatFeatures.hasMultipleDataRows = lines.length >= 3;
+        formatFeatures.hasMultipleDataRows = lines.length >= 2;
         
-        // 综合判断是否为表格
-        return formatFeatures.hasTabularStructure && 
-               formatFeatures.hasMultipleDataRows && 
-               (formatFeatures.hasNumberedRows || formatFeatures.hasConsistentColumns);
+        // 4. 检测是否有键值对格式（通用结构化数据）
+        formatFeatures.hasKeyValuePairs = lines.some(line => line.includes(':'));
+        formatFeatures.hasStructuredData = lines.some(line => line.match(/^(.+?):\s*(.+)$/));
+        
+        // 5. 检测表格分隔符（制表符、多个空格等）
+        formatFeatures.hasTableSeparators = lines.some(line => 
+            line.includes('\t') || line.match(/\s{3,}/) || line.includes('|')
+        );
+        
+        // 6. 检测对齐的数据（通过空格对齐的列）
+        formatFeatures.hasAlignedData = this.detectAlignedColumns(lines);
+        
+        // 综合判断是否为表格（更严格的条件）
+        return (formatFeatures.hasTabularStructure && formatFeatures.hasMultipleDataRows && formatFeatures.hasConsistentColumns) ||
+               (formatFeatures.hasStructuredData && formatFeatures.hasKeyValuePairs) ||
+               (formatFeatures.hasTableSeparators && formatFeatures.hasMultipleDataRows) ||
+               (formatFeatures.hasAlignedData && formatFeatures.hasMultipleDataRows && formatFeatures.hasConsistentColumns) ||
+               (formatFeatures.hasNumberedRows && formatFeatures.hasMultipleDataRows && formatFeatures.hasConsistentColumns);
+    }
+
+    /**
+     * 检测列是否对齐
+     * @param {Array} lines 文本行数组
+     * @returns {boolean} 列是否对齐
+     */
+    detectAlignedColumns(lines) {
+        if (lines.length < 2) return false;
+        
+        // 分析每行的空格模式
+        const spacePatterns = lines.map(line => {
+            const matches = line.match(/\s{2,}/g);
+            return matches ? matches.length : 0;
+        });
+        
+        // 如果大部分行都有相似的空格模式，说明列对齐
+        const avgSpaces = spacePatterns.reduce((sum, count) => sum + count, 0) / spacePatterns.length;
+        const consistentSpaces = spacePatterns.filter(count => count >= avgSpaces * 0.5).length;
+        
+        return consistentSpaces >= Math.floor(lines.length * 0.6);
     }
 
     /**
@@ -776,19 +1504,30 @@ class FilePreview {
      * @returns {boolean} 是否为表格
      */
     isSingleLineTable(line) {
+        // 通用的单行表格检测
+        const trimmedLine = line.trim();
+        
         // 检测是否包含多个数字序号
-        const numberMatches = line.match(/\d+[\.\s]+/g);
-        if (!numberMatches || numberMatches.length < 2) return false;
+        const numberMatches = trimmedLine.match(/\d+[\.\s]+/g);
+        if (numberMatches && numberMatches.length >= 2) {
+            // 检测是否包含多个数据项
+            const dataItems = trimmedLine.split(/\d+[\.\s]+/).filter(item => item.trim().length > 0);
+            return dataItems.length >= 2;
+        }
         
-        // 检测是否包含表格关键词（作为辅助判断）
-        const tableKeywords = ['序号', '品名', '规格', '数量', '重量', '日期', '报检单号'];
-        const hasTableKeywords = tableKeywords.some(keyword => line.includes(keyword));
+        // 检测是否包含表格分隔符
+        if (trimmedLine.includes('\t') || trimmedLine.match(/\s{3,}/) || trimmedLine.includes('|')) {
+            const parts = trimmedLine.split(/\t|\s{3,}|\|/).filter(part => part.trim().length > 0);
+            return parts.length >= 2;
+        }
         
-        // 检测是否包含多个数据项
-        const dataItems = line.split(/\d+[\.\s]+/).filter(item => item.trim().length > 0);
-        const hasMultipleItems = dataItems.length >= 2;
+        // 检测是否包含键值对格式
+        if (trimmedLine.includes(':')) {
+            const keyValuePairs = trimmedLine.split(/\s*:\s*/).filter(part => part.trim().length > 0);
+            return keyValuePairs.length >= 2;
+        }
         
-        return hasTableKeywords && hasMultipleItems;
+        return false;
     }
 
     /**

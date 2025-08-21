@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF文本提取演示 - 按页功能</title>
+    <script src="js/tailwindcss.js"></script>
+    <script src="js/vue.global.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- 标题 -->
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-4">PDF文本提取演示</h1>
+                <p class="text-lg text-gray-600">支持按页提取PDF文本内容</p>
+            </div>
+
+            <!-- 输入表单 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">PDF文件URL</h2>
+                <div class="flex gap-4">
+                    <input 
+                        v-model="pdfUrl" 
+                        type="text" 
+                        placeholder="请输入PDF文件URL"
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        @keyup.enter="extractText"
+                    >
+                    <button 
+                        @click="extractText" 
+                        :disabled="loading"
+                        class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span v-if="loading">提取中...</span>
+                        <span v-else>提取文本</span>
+                    </button>
+                </div>
+                
+                <!-- 示例URL -->
+                <div class="mt-4">
+                    <p class="text-sm text-gray-600 mb-2">示例URL:</p>
+                    <div class="space-y-2">
+                        <button 
+                            @click="pdfUrl = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'"
+                            class="text-sm text-blue-500 hover:text-blue-700 underline"
+                        >
+                            单页PDF示例
+                        </button>
+                        <br>
+                        <button 
+                            @click="pdfUrl = 'http://oss.vtopideal.com/prod/static/pdf/广州银行.pdf'"
+                            class="text-sm text-blue-500 hover:text-blue-700 underline"
+                        >
+                            多页PDF示例
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 错误信息 -->
+            <div v-if="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">提取失败</h3>
+                        <div class="mt-2 text-sm text-red-700">
+                            <p>{{ error }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 结果展示 -->
+            <div v-if="result" class="space-y-8">
+                <!-- 文件信息 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">文件信息</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <div class="text-sm font-medium text-blue-600">页面数量</div>
+                            <div class="text-2xl font-bold text-blue-800">{{ result.pageCount }}</div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="text-sm font-medium text-green-600">文本长度</div>
+                            <div class="text-2xl font-bold text-green-800">{{ result.textLength }}</div>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <div class="text-sm font-medium text-purple-600">文件大小</div>
+                            <div class="text-2xl font-bold text-purple-800">{{ result.fileSize }} MB</div>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <div class="text-sm font-medium text-orange-600">包含文本</div>
+                            <div class="text-2xl font-bold text-orange-800">{{ result.hasText ? '是' : '否' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 按页内容 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">按页内容</h2>
+                    <div class="space-y-6">
+                        <div v-for="page in result.pages" :key="page.pageNumber" class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold text-gray-800">第{{ page.pageNumber }}页</h3>
+                                <div class="text-sm text-gray-500">{{ page.lineCount }}行 | {{ page.text.length }}字符</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono">{{ page.text }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 按页Markdown内容 -->
+                <div v-if="result.markdownPages && result.markdownPages.length > 0" class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">按页Markdown内容</h2>
+                    <div class="space-y-6">
+                        <div v-for="page in result.markdownPages" :key="page.pageNumber" class="border border-gray-200 rounded-lg p-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold text-gray-800">第{{ page.pageNumber }}页 (Markdown)</h3>
+                                <div class="text-sm text-gray-500">{{ page.lineCount }}行 | {{ page.markdown.length }}字符</div>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono">{{ page.markdown }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Markdown格式 -->
+                <div v-if="result.markdown" class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">Markdown格式</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">{{ result.markdown }}</pre>
+                    </div>
+                </div>
+
+                <!-- 完整文本 -->
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-4">完整文本</h2>
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <pre class="text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-96 overflow-y-auto">{{ result.text }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    pdfUrl: '',
+                    loading: false,
+                    error: null,
+                    result: null
+                }
+            },
+            methods: {
+                async extractText() {
+                    if (!this.pdfUrl.trim()) {
+                        this.error = '请输入PDF文件URL';
+                        return;
+                    }
+
+                    this.loading = true;
+                    this.error = null;
+                    this.result = null;
+
+                    try {
+                        const response = await fetch(`/api/filePreview/pdfText?url=${encodeURIComponent(this.pdfUrl)}`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.result = data.data;
+                        } else {
+                            this.error = data.message;
+                        }
+                    } catch (err) {
+                        this.error = '请求失败: ' + err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

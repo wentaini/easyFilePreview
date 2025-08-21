@@ -5,7 +5,7 @@ const path = require('path');
 const app = express()
 
 // 导入文件预览模块
-const { filePreviewHandler, fileInfoHandler, supportedFormatsHandler } = require('./utils/filePreviewHandler')
+const { filePreviewHandler, fileInfoHandler, supportedFormatsHandler, pdfTextHandler } = require('./utils/filePreviewHandler')
 const filePreview = require('./utils/filePreview')
 
 
@@ -139,6 +139,25 @@ app.get('/api/filePreview/info', fileInfoHandler);
  *     curl -X GET "http://localhost/api/filePreview/formats"
  */
 app.get('/api/filePreview/formats', supportedFormatsHandler);
+
+/**
+ * @api {get} /api/filePreview/pdfText 获取PDF文本内容
+ * @apiName PdfText
+ * @apiGroup 文件预览
+ * @apiVersion 1.0.0
+ * 
+ * @apiParam {String} url 文件URL
+ * 
+ * @apiSuccess {Object} data PDF文本内容
+ * @apiSuccess {String} data.text 提取的文本内容
+ * @apiSuccess {Number} data.pageCount 页面数量
+ * @apiSuccess {Boolean} data.hasText 是否包含文本
+ * @apiSuccess {String} data.fileSize 文件大小
+ * 
+ * @apiExample {curl} 示例:
+ *     curl -X GET "http://localhost/api/filePreview/pdfText?url=https://example.com/file.pdf"
+ */
+app.get('/api/filePreview/pdfText', pdfTextHandler);
 
 /**
  * @api {get} /api/filePreview/stream/:fileId 文件流下载

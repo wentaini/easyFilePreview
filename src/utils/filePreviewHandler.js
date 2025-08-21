@@ -277,8 +277,136 @@ function getFormatDescription(ext) {
     return descriptions[ext] || '未知格式';
 }
 
+/**
+ * PDF文本内容获取处理器
+ * @param {Object} req 请求对象
+ * @param {Object} res 响应对象
+ */
+async function pdfTextHandler(req, res) {
+    console.log('🔍 [DEBUG] pdfTextHandler 开始执行');
+    console.log('🔍 [DEBUG] 请求查询参数:', req.query);
+    
+    try {
+        // 重构URL参数处理，解决Express.js将&误认为参数分隔符的问题
+        let url = req.query.url;
+        console.log('🔍 [DEBUG] 原始URL参数:', url);
+        
+        if (!url) {
+            console.log('🔍 [DEBUG] 缺少URL参数');
+            return res.status(400).json({
+                success: false,
+                message: '缺少文件URL参数',
+                data: null
+            });
+        }
+        
+        // 检查是否有额外的AWS S3参数被Express.js误解析
+        const awsParams = [];
+        if (req.query['X-Amz-Algorithm']) awsParams.push(`X-Amz-Algorithm=${req.query['X-Amz-Algorithm']}`);
+        if (req.query['X-Amz-Credential']) awsParams.push(`X-Amz-Credential=${req.query['X-Amz-Credential']}`);
+        if (req.query['X-Amz-Date']) awsParams.push(`X-Amz-Date=${req.query['X-Amz-Date']}`);
+        if (req.query['X-Amz-Expires']) awsParams.push(`X-Amz-Expires=${req.query['X-Amz-Expires']}`);
+        if (req.query['X-Amz-SignedHeaders']) awsParams.push(`X-Amz-SignedHeaders=${req.query['X-Amz-SignedHeaders']}`);
+        if (req.query['X-Amz-Signature']) awsParams.push(`X-Amz-Signature=${req.query['X-Amz-Signature']}`);
+        
+        // 如果检测到AWS参数被分离，重新组合完整URL
+        if (awsParams.length > 0) {
+            console.log('🔍 [DEBUG] 检测到AWS参数被分离，重新组合URL');
+            console.log('🔍 [DEBUG] 分离的AWS参数:', awsParams);
+            
+            // 检查URL是否已经包含查询参数
+            const separator = url.includes('?') ? '&' : '?';
+            url = url + separator + awsParams.join('&');
+            console.log('🔍 [DEBUG] 重新组合后的URL:', url);
+        }
+        
+        // 检查URL是否需要解码
+        if (url.includes('%3A') || url.includes('%2F') || url.includes('%26')) {
+            console.log('🔍 [DEBUG] 检测到编码的URL，进行解码');
+            try {
+                url = decodeURIComponent(url);
+                console.log('🔍 [DEBUG] 解码后的URL:', url);
+            } catch (decodeError) {
+                console.log('🔍 [DEBUG] URL解码失败:', decodeError.message);
+                // 解码失败时继续使用原始URL
+            }
+        }
+        
+        console.log('🔍 [DEBUG] 最终使用的URL:', url);
+
+        // 验证URL格式
+        console.log('🔍 [DEBUG] 验证URL格式');
+        try {
+            new URL(url);
+            console.log('🔍 [DEBUG] URL格式验证通过');
+        } catch (error) {
+            console.log('🔍 [DEBUG] URL格式验证失败:', error.message);
+            return res.status(400).json({
+                success: false,
+                message: '无效的文件URL格式',
+                data: null
+            });
+        }
+
+        // 检查文件格式是否为PDF
+        console.log('🔍 [DEBUG] 检查文件格式');
+        const fileExtension = filePreview.getFileExtension(url);
+        if (fileExtension.toLowerCase() !== 'pdf') {
+            console.log('🔍 [DEBUG] 文件格式不是PDF');
+            return res.status(400).json({
+                success: false,
+                message: '只支持PDF文件格式',
+                data: {
+                    fileInfo: filePreview.getFileInfo(url)
+                }
+            });
+        }
+        console.log('🔍 [DEBUG] 文件格式是PDF');
+
+        // 获取PDF文本内容
+        console.log('🔍 [DEBUG] 开始提取PDF文本内容');
+        const pdfTextResult = await filePreview.extractPdfText(url);
+        
+        console.log('🔍 [DEBUG] PDF文本提取成功');
+        logInfo(`PDF文本提取成功: ${url}`, {
+            fileName: filePreview.getFileInfo(url).fileName,
+            pageCount: pdfTextResult.pageCount,
+            hasText: pdfTextResult.hasText,
+            textLength: pdfTextResult.text ? pdfTextResult.text.length : 0,
+            userAgent: req.get('User-Agent'),
+            ip: req.ip
+        });
+
+        res.json({
+            success: true,
+            message: 'PDF文本提取成功',
+            data: pdfTextResult
+        });
+
+    } catch (error) {
+        console.log('🔍 [DEBUG] pdfTextHandler 发生错误:');
+        console.log('🔍 [DEBUG] 错误类型:', error.constructor.name);
+        console.log('🔍 [DEBUG] 错误消息:', error.message);
+        console.log('🔍 [DEBUG] 错误堆栈:', error.stack);
+        
+        logError(`PDF文本提取失败: ${error.message}`, {
+            url: req.query.url,
+            error: error.stack,
+            userAgent: req.get('User-Agent'),
+            ip: req.ip
+        });
+
+        res.status(500).json({
+            success: false,
+            message: `PDF文本提取失败: ${error.message}`,
+            data: null
+        });
+    }
+}
+
 module.exports = {
     filePreviewHandler,
     fileInfoHandler,
-    supportedFormatsHandler
+    supportedFormatsHandler,
+    pdfTextHandler
 }; 

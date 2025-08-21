@@ -1,437 +1,324 @@
-# EasyFilePreview 📄
+# EasyFilePreview
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Express](https://img.shields.io/badge/Express-4.19+-orange.svg)](https://expressjs.com/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.0+-green.svg)](https://vuejs.org/)
+一个强大的文件预览系统，支持多种文件格式的在线预览，包括PDF、Office文档、图片、文本文件等。
 
-> 🚀 轻量级文件预览组件，支持 PDF、Office、CSV、Markdown 等多格式响应式预览，可 iframe 嵌入，提供极简界面与单元格一键复制。
+## 功能特性
 
-## ✨ 功能特性
+### 📄 文件预览
+- **PDF文件**: 在线预览，支持缩放、翻页
+- **Office文档**: Word、Excel、PowerPoint文档预览
+- **图片文件**: JPG、PNG、GIF等格式预览
+- **文本文件**: TXT、MD、XML、CSV等格式预览
+- **代码文件**: 语法高亮显示
 
-### 📄 多格式支持
-- **PDF文档**: 原生PDF预览，支持缩放、翻页
-- **Office文档**: Word、Excel、PowerPoint 文件预览
-- **文本文件**: Markdown、XML、TXT 等格式
-- **表格文件**: CSV、Excel 表格数据展示
-- **图片文件**: 常见图片格式预览
+### 🔍 PDF文本提取
+- **文本提取**: 从PDF文件中提取纯文本内容
+- **分页处理**: 智能分割PDF页面，返回每页的文本内容
+- **Markdown转换**: 自动将文本转换为Markdown格式
+- **通用表格识别**: 智能识别和转换各种表格格式
 
-### 📱 响应式设计
-- **PC端**: 完整功能界面，支持复杂操作
-- **平板端**: 适配中等屏幕，优化触控体验
-- **移动端**: 精简界面，支持手势操作
+### 🎨 用户界面
+- **响应式设计**: 支持PC、平板、手机等设备
+- **现代化UI**: 使用Tailwind CSS构建的美观界面
+- **交互友好**: 直观的操作体验
 
-### 🔗 集成特性
-- **iframe嵌入**: 可轻松嵌入到任何网页
-- **API接口**: RESTful API，支持第三方集成
-- **跨域支持**: 完整的CORS配置
-- **缓存机制**: 智能文件缓存，提升性能
-
-### 🎨 用户体验
-- **一键复制**: 表格单元格内容快速复制
-- **极简界面**: 简洁美观的用户界面
-- **加载动画**: 优雅的加载状态提示
-- **错误处理**: 友好的错误信息展示
-
-## 🛠️ 技术栈
-
-### 前端技术
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| **TailwindCSS** | 最新 | UI框架，响应式样式 |
-| **Vue.js** | 3.0+ | MVVM框架，数据绑定 |
-| **Marked.js** | 最新 | Markdown渲染 |
-
-
-### 后端技术
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| **Express.js** | 4.19+ | Web框架 |
-| **axios** | 1.8+ | HTTP客户端 |
-| **pdf-parse** | 1.1+ | PDF解析 |
-| **xlsx** | 0.18+ | Excel处理 |
-| **marked** | 16.1+ | Markdown解析 |
-| **xml2js** | 0.6+ | XML解析 |
-
-## 📁 项目结构
-
-```
-easyfilePreview/
-├── src/                    # 主代码目录
-│   ├── router.js           # Express路由配置
-│   ├── public/             # 静态资源
-│   │   ├── css/            # 样式文件
-│   │   │   ├── common.css  # 通用样式
-│   │   │   ├── demo.css    # 演示页面样式
-│   │   │   ├── preview.css # 预览页面样式
-│   │   │   └── simple.css  # 简化页面样式
-│   │   ├── js/             # JavaScript库
-│   │   ├── demoDoc/        # 演示文档
-│   │   ├── filePreview.html        # 主预览页面
-│   │   ├── filePreviewDemo.html    # 演示页面
-│   │   └── filePreviewSimple.html  # 简化预览页面
-│   └── utils/              # 工具函数
-│       ├── filePreview.js          # 文件预览核心逻辑
-│       ├── filePreviewHandler.js   # 预览处理器
-│       └── excelImageExtractor.js  # Excel图片提取
-├── config/                 # 配置文件
-│   └── default.js          # 默认配置
-├── docs/                   # 文档
-│   └── docker-deployment.md # Docker部署文档
-├── scripts/                # 脚本文件
-│   └── docker-deploy.sh    # Docker部署脚本
-├── Dockerfile              # 生产环境Docker配置
-├── Dockerfile.dev          # 开发环境Docker配置
-├── docker-compose.yml      # Docker编排配置
-├── index.js                # 应用入口
-├── package.json            # 项目配置
-├── README.md               # 项目说明
-└── LICENSE                 # 开源协议
-```
-
-## 🚀 快速开始
+## 快速开始
 
 ### 环境要求
+- Node.js 16+
+- npm 或 cnpm
 
-- **Node.js**: 18.0 或更高版本
-- **npm**: 8.0 或更高版本
-- **操作系统**: Windows、macOS、Linux
-
-### 安装部署
-
-#### 方式一：本地安装
-
+### 安装依赖
 ```bash
-# 1. 克隆项目
-git clone https://github.com/wentaini/easyFilePreview.git
-cd easyFilePreview
-
-# 2. 安装依赖
 npm install
-# 或使用cnpm（推荐国内用户）
+# 或使用cnpm
 cnpm install
-
-# 3. 启动服务
-npm start
 ```
 
-#### 方式二：Docker部署
-
+### 启动服务
 ```bash
-# 1. 构建并启动（生产环境）
-docker-compose up --build
-
-# 2. 开发环境
-docker-compose -f docker-compose.yml up easyfilepreview-dev
+node index.js
 ```
 
-#### 方式三：一键部署脚本
+服务将在 `http://localhost:3000` 启动
 
+## API文档
+
+### 文件预览API
+
+#### GET /api/filePreview
+获取文件预览信息
+
+**参数:**
+- `url`: 文件URL地址
+
+**示例:**
 ```bash
-# 使用部署脚本
-./scripts/docker-deploy.sh prod
+GET /api/filePreview?url=https://example.com/document.pdf
 ```
 
-### 访问地址
+### PDF文本提取API
 
-- **演示页面**: http://localhost:3000/
-- **主预览页面**: http://localhost:3000/filePreview.html
-- **简化预览页面**: http://localhost:3000/filePreviewSimple.html
+#### GET /api/filePreview/pdfText
+从PDF文件中提取文本内容
 
-## 📚 API文档
+**参数:**
+- `url`: PDF文件URL地址
 
-### 基础接口
-
-#### 1. 文件预览接口
-
-```http
-GET /api/filePreview/preview?url={fileUrl}
+**示例:**
+```bash
+GET /api/filePreview/pdfText?url=https://example.com/document.pdf
 ```
 
-**参数说明**
-- `url`: 文件URL地址（必需）
-
-**响应示例**
+**响应格式:**
 ```json
 {
   "success": true,
   "data": {
-    "fileInfo": {
-      "fileName": "example.pdf",
-      "fileSize": "1.2MB",
-      "fileType": "pdf"
-    },
-    "preview": {
-      "content": "文件预览内容",
-      "type": "pdf"
-    }
-  }
-}
-```
-
-#### 2. 文件信息接口
-
-```http
-GET /api/filePreview/info?url={fileUrl}
-```
-
-**响应示例**
-```json
-{
-  "success": true,
-  "data": {
-    "fileName": "example.xlsx",
-    "fileSize": "2.5MB",
-    "fileType": "excel",
-    "lastModified": "2025-08-07T10:30:00Z"
-  }
-}
-```
-
-#### 3. 支持格式接口
-
-```http
-GET /api/filePreview/formats
-```
-
-**响应示例**
-```json
-{
-  "success": true,
-  "data": {
-    "supportedFormats": [
-      "pdf", "docx", "xlsx", "pptx", "csv", "md", "xml", "txt"
+    "text": "完整的PDF文本内容",
+    "markdown": "转换为Markdown格式的内容",
+    "pages": [
+      {
+        "pageNumber": 1,
+        "text": "第1页的文本内容"
+      }
+    ],
+    "markdownPages": [
+      {
+        "pageNumber": 1,
+        "markdown": "第1页的Markdown内容"
+      }
     ]
   }
 }
 ```
 
-#### 4. 文件流下载接口
+## 通用表格识别功能
 
-```http
-GET /api/filePreview/stream/{fileId}
+系统支持智能识别和转换多种表格格式：
+
+### 支持的表格类型
+
+1. **标准表格格式**
+   ```
+   姓名  年龄  职业  城市
+   张三  25   工程师  北京
+   李四  30   设计师  上海
+   ```
+
+2. **键值对格式**
+   ```
+   姓名: 张三
+   年龄: 25
+   职业: 工程师
+   ```
+
+3. **对齐列格式**
+   ```
+   产品名称    价格    库存    状态
+   苹果手机    6999    100     有货
+   华为平板    3999    50      缺货
+   ```
+
+4. **单行表格格式**
+   ```
+   序号 产品 价格 库存 1 苹果 6999 100 2 华为 3999 50
+   ```
+
+### 表格转换示例
+
+**输入（键值对格式）：**
+```
+户名: 张三
+账号: 1234567890123456
+金额: ¥1000.00
 ```
 
-### 使用示例
-
-#### 基本预览
-
-```html
-<!-- 完整预览模式 -->
-<iframe 
-  src="http://localhost:3000/filePreview.html?url=https://example.com/document.pdf" 
-  width="100%" 
-  height="600px"
-  frameborder="0">
-</iframe>
+**输出（Markdown表格）：**
+```markdown
+| 字段 | 值 |
+| --- | --- |
+| 户名 | 张三 |
+| 账号 | 1234567890123456 |
+| 金额 | ¥1000.00 |
 ```
 
-#### 简化预览
+### 技术特点
 
-```html
-<!-- 简化预览模式 -->
-<iframe 
-  src="http://localhost:3000/filePreviewSimple.html?url=https://example.com/spreadsheet.xlsx" 
-  width="100%" 
-  height="500px"
-  frameborder="0">
-</iframe>
+- **通用性**: 不依赖特定文档格式，支持多种表格结构
+- **准确性**: 基于格式特征而非内容关键词，避免误判
+- **灵活性**: 支持单行和多行表格，不同分隔符
+- **可扩展性**: 模块化设计，易于添加新的表格类型
+
+## 项目结构
+
+```
+easyfilePreview/
+├── src/
+│   ├── public/           # 静态资源
+│   │   ├── css/         # 样式文件
+│   │   ├── js/          # JavaScript文件
+│   │   └── demoDoc/     # 示例文档
+│   ├── router.js        # 路由配置
+│   └── utils/           # 工具函数
+│       ├── filePreview.js           # 文件预览核心逻辑
+│       ├── filePreviewHandler.js    # 预览处理器
+│       └── excelImageExtractor.js   # Excel图片提取
+├── config/              # 配置文件
+├── docs/                # 文档
+├── scripts/             # 脚本文件
+├── index.js             # 应用入口
+└── package.json         # 项目配置
 ```
 
-#### API调用
+## 技术栈
 
-```javascript
-// 获取文件预览
-fetch('/api/filePreview/preview?url=https://example.com/file.pdf')
-  .then(response => response.json())
-  .then(data => {
-    console.log('预览数据:', data);
-  });
+### 前端
+- **Tailwind CSS**: 现代化CSS框架
+- **Vue.js**: 渐进式JavaScript框架
+- **Chart.js**: 图表库
+- **Marked**: Markdown解析器
 
-// 获取文件信息
-fetch('/api/filePreview/info?url=https://example.com/file.xlsx')
-  .then(response => response.json())
-  .then(data => {
-    console.log('文件信息:', data);
-  });
-```
+### 后端
+- **Node.js**: JavaScript运行时
+- **Express**: Web应用框架
+- **pdf-parse**: PDF解析库
+- **mammoth**: Word文档解析
+- **xlsx**: Excel文件处理
 
-## 🔧 配置说明
+## 配置说明
 
 ### 环境变量
-
-创建 `.env` 文件（参考 `env.example`）：
+复制 `env.example` 为 `.env` 并配置：
 
 ```bash
 # 服务器配置
 PORT=3000
-HOST=0.0.0.0
-NODE_ENV=production
+NODE_ENV=development
 
-# CORS配置
-CORS_ORIGIN=*
-CORS_CREDENTIALS=true
-
-# 日志配置
-LOG_LEVEL=info
-
-# 文件上传配置
-MAX_FILE_SIZE=100mb
-UPLOAD_PATH=./uploads
-
-# 缓存配置
-CACHE_ENABLED=true
-CACHE_TIMEOUT=3600000
+# 文件缓存配置
+CACHE_DURATION=3600000
+MAX_FILE_SIZE=52428800
 ```
 
-### 自定义配置
+### 文件格式支持
 
-编辑 `config/default.js`：
+| 格式 | 扩展名 | 预览方式 |
+|------|--------|----------|
+| PDF | .pdf | 在线预览 |
+| Word | .doc, .docx | 转换为HTML |
+| Excel | .xls, .xlsx | 转换为HTML |
+| PowerPoint | .ppt, .pptx | 转换为HTML |
+| 图片 | .jpg, .jpeg, .png, .gif | 直接显示 |
+| 文本 | .txt, .md, .xml, .csv | 语法高亮 |
 
+## 使用示例
+
+### 基本预览
 ```javascript
-module.exports = {
-  server: {
-    port: process.env.PORT || 3000,
-    host: process.env.HOST || '0.0.0.0'
-  },
-  cors: {
-    origin: process.env.CORS_ORIGIN || '*',
-    credentials: process.env.CORS_CREDENTIALS === 'true'
-  },
-  filePreview: {
-    maxFileSize: process.env.MAX_FILE_SIZE || '100mb',
-    cacheTimeout: process.env.CACHE_TIMEOUT || 3600000
-  }
-};
+// 获取文件预览信息
+const response = await fetch('/api/filePreview?url=https://example.com/document.pdf');
+const data = await response.json();
+
+if (data.success) {
+    console.log('预览URL:', data.data.previewUrl);
+    console.log('文件类型:', data.data.type);
+}
 ```
 
-## 🐳 Docker部署
+### PDF文本提取
+```javascript
+// 提取PDF文本
+const response = await fetch('/api/filePreview/pdfText?url=https://example.com/document.pdf');
+const data = await response.json();
 
-### 生产环境
+if (data.success) {
+    // 检查是否包含表格
+    const hasTable = data.data.markdown.includes('|');
+    
+    if (hasTable) {
+        console.log('PDF包含表格数据');
+        console.log('Markdown表格:', data.data.markdown);
+    }
+    
+    // 分页处理
+    data.data.markdownPages.forEach(page => {
+        const hasTable = page.markdown.includes('|');
+        if (hasTable) {
+            console.log(`第${page.pageNumber}页包含表格`);
+        }
+    });
+}
+```
 
+## 部署
+
+### Docker部署
 ```bash
-# 构建生产镜像
+# 构建镜像
 docker build -t easyfilepreview .
 
 # 运行容器
-docker run -d -p 3000:3000 --name easyfilepreview easyfilepreview
+docker run -p 3000:3000 easyfilepreview
 ```
 
-### 开发环境
-
+### 生产环境
 ```bash
-# 构建开发镜像
-docker build -f Dockerfile.dev -t easyfilepreview-dev .
+# 使用PM2管理进程
+npm install -g pm2
+pm2 start index.js --name easyfilepreview
 
-# 运行开发容器
-docker run -d -p 3000:3000 -v $(pwd):/app --name easyfilepreview-dev easyfilepreview-dev
+# 设置开机自启
+pm2 startup
+pm2 save
 ```
 
-### Docker Compose
+## 开发
 
-```bash
-# 启动所有服务
-docker-compose up -d
+### 代码规范
+- 使用ESLint + Prettier
+- 遵循Node.js项目目录规范
+- 使用async/await避免回调地狱
 
-# 查看服务状态
-docker-compose ps
-
-# 查看日志
-docker-compose logs -f
-```
-
-## 🧪 测试
-
-### 单元测试
-
+### 测试
 ```bash
 # 运行测试
 npm test
 
-# 测试覆盖率
-npm run test:coverage
+# 代码检查
+npm run lint
 ```
 
-### 集成测试
+## 贡献
 
-```bash
-# 启动测试服务器
-npm run test:integration
-```
-
-## 📊 性能优化
-
-### 缓存策略
-- **文件缓存**: 智能缓存已下载文件
-- **内存缓存**: 减少重复下载
-- **CDN支持**: 支持CDN加速
-
-### 加载优化
-- **懒加载**: 按需加载文件内容
-- **压缩传输**: Gzip压缩响应
-- **静态资源**: 静态文件缓存
-
-## 🔒 安全特性
-
-- **SQL注入防护**: 参数过滤和验证
-- **XSS防护**: 输出内容转义
-- **CORS配置**: 跨域请求控制
-- **文件类型验证**: 严格的文件类型检查
-- **大小限制**: 文件大小限制
-
-## 🤝 贡献指南
+欢迎提交Issue和Pull Request！
 
 ### 开发流程
+1. Fork项目
+2. 创建功能分支
+3. 提交更改
+4. 创建Pull Request
 
-1. **Fork项目**
-   ```bash
-   git clone https://github.com/your-username/easyFilePreview.git
-   ```
+## 许可证
 
-2. **创建分支**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+MIT License
 
-3. **提交更改**
-   ```bash
-   git add .
-   git commit -m "feat: 添加新功能"
-   ```
+## 更新日志
 
-4. **推送分支**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+### v1.1.0
+- ✨ 添加通用表格识别功能
+- ✨ 支持多种表格类型转换
+- 🔧 改进表格检测算法
+- 🐛 修复占位符保护机制
+- 📚 完善API文档
 
-5. **创建Pull Request**
+### v1.0.0
+- 🎉 初始版本发布
+- ✨ 基础文件预览功能
+- ✨ PDF文本提取功能
+- ✨ Markdown转换功能
+- 📱 响应式界面设计
 
-### 代码规范
+## 支持
 
-- 使用ESLint进行代码检查
-- 遵循JavaScript标准规范
-- 添加适当的注释和文档
-- 编写单元测试
-
-## 📄 许可证
-
-本项目采用 [Apache License 2.0](LICENSE) 开源协议。
-
-## 🙏 致谢
-
-感谢以下开源项目的支持：
-
-- [Express.js](https://expressjs.com/) - Web应用框架
-- [Vue.js](https://vuejs.org/) - 前端框架
-- [TailwindCSS](https://tailwindcss.com/) - CSS框架
-- [Marked.js](https://marked.js.org/) - Markdown解析器
-
-## 📞 联系方式
-
-- **项目地址**: https://github.com/wentaini/easyFilePreview
-- **问题反馈**: [Issues](https://github.com/wentaini/easyFilePreview/issues)
-- **功能建议**: [Discussions](https://github.com/wentaini/easyFilePreview/discussions)
-
----
-
-⭐ 如果这个项目对您有帮助，请给我们一个Star！ 
+如有问题，请提交Issue或联系开发团队。 
