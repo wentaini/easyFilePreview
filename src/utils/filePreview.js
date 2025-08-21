@@ -636,8 +636,8 @@ class FilePreview {
                 // 账号字段
                 markdown += `| 账号 | ${line} |\n`;
             } else if (line.trim().length > 0) {
-                // 其他数据字段
-                markdown += `| 数据 | ${line} |\n`;
+                // 其他数据字段 - 保持原始格式，不添加标签
+                markdown += `${line}\n`;
             }
         }
         
