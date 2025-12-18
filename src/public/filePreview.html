@@ -487,7 +487,16 @@
 
                     try {
                         console.log('🔍 开始预览文件:', this.fileUrl);
-                        const response = await fetch(`/api/filePreview/preview?url=${encodeURIComponent(this.fileUrl)}`);
+                        // 从URL参数中获取includeHiddenSheets
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const includeHiddenSheets = urlParams.get('includeHiddenSheets');
+                        
+                        // 构建API请求URL
+                        let apiUrl = `/api/filePreview/preview?url=${encodeURIComponent(this.fileUrl)}`;
+                        if (includeHiddenSheets) {
+                            apiUrl += `&includeHiddenSheets=${encodeURIComponent(includeHiddenSheets)}`;
+                        }
+                        const response = await fetch(apiUrl);
                         const result = await response.json();
 
                         console.log('📋 API响应:', result);

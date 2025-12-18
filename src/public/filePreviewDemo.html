@@ -68,6 +68,24 @@
                         <p class="text-gray-600">Excel和CSV文件支持点击单元格复制内容到剪贴板</p>
                     </div>
                 </div>
+                
+                <!-- Excel隐藏sheet功能说明 -->
+                <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-3">✨ Excel增强功能</h3>
+                    <div class="space-y-2 text-blue-800">
+                        <p><strong>隐藏工作表支持：</strong></p>
+                        <ul class="list-disc list-inside space-y-1 ml-4">
+                            <li>自动检测Excel文件中的隐藏工作表</li>
+                            <li>通过 <code class="bg-blue-100 px-1 py-0.5 rounded">includeHiddenSheets=true</code> 参数控制是否返回隐藏工作表内容</li>
+                            <li>响应中包含 <code class="bg-blue-100 px-1 py-0.5 rounded">hasHiddenSheets</code> 和 <code class="bg-blue-100 px-1 py-0.5 rounded">hiddenSheetNames</code> 字段</li>
+                            <li>每个工作表信息中包含 <code class="bg-blue-100 px-1 py-0.5 rounded">isHidden</code> 字段标识是否隐藏</li>
+                        </ul>
+                        <p class="mt-3"><strong>使用示例：</strong></p>
+                        <div class="bg-blue-100 p-2 rounded text-sm font-mono mt-2">
+                            /filePreview.html?url=文件URL&includeHiddenSheets=true
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 文件地址生成工具 -->
@@ -163,6 +181,18 @@
                             <div id="excel-code" class="code-block">
 &lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/excelExp.xlsx" 
         width="100%" height="400"&gt;&lt;/iframe&gt;
+                            </div>
+                        </div>
+                        <div class="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                            <p class="text-sm text-yellow-800">
+                                <strong>💡 提示：</strong>如果Excel文件包含隐藏的工作表，可以通过添加 <code class="bg-yellow-100 px-1 py-0.5 rounded">includeHiddenSheets=true</code> 参数来预览隐藏的工作表内容。
+                            </p>
+                            <div class="mt-2 relative">
+                                <button @click="copyCode('excel-hidden-code')" class="copy-button">复制代码</button>
+                                <div id="excel-hidden-code" class="code-block text-xs">
+&lt;iframe src="{{ baseUrl }}/filePreview.html?url={{ baseUrl }}/demoDoc/excelExp.xlsx&includeHiddenSheets=true" 
+        width="100%" height="400"&gt;&lt;/iframe&gt;
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -338,6 +368,27 @@
                             <p class="text-blue-800 text-sm"><strong>💡 提示：</strong>在Excel和CSV预览页面中，将鼠标悬停在单元格上会显示提示，点击即可复制单元格内容。</p>
                         </div>
                     </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-3">5. Excel隐藏工作表功能</h3>
+                        <p class="text-gray-600 mb-2">Excel文件支持检测和预览隐藏的工作表：</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-1 mb-3">
+                            <li><strong>默认行为：</strong>默认情况下，隐藏的工作表不会在预览中显示</li>
+                            <li><strong>包含隐藏工作表：</strong>在URL中添加 <code class="bg-gray-100 px-1 py-0.5 rounded">includeHiddenSheets=true</code> 参数可以预览隐藏的工作表</li>
+                            <li><strong>状态检测：</strong>API响应中包含 <code class="bg-gray-100 px-1 py-0.5 rounded">hasHiddenSheets</code> 字段，指示是否存在隐藏工作表</li>
+                            <li><strong>隐藏工作表列表：</strong>响应中的 <code class="bg-gray-100 px-1 py-0.5 rounded">hiddenSheetNames</code> 字段包含所有隐藏工作表的名称</li>
+                            <li><strong>工作表标识：</strong>每个工作表信息中的 <code class="bg-gray-100 px-1 py-0.5 rounded">isHidden</code> 字段标识该工作表是否隐藏</li>
+                        </ul>
+                        <div class="bg-gray-100 p-3 rounded text-sm font-mono mb-3">
+                            <!-- 默认不包含隐藏sheet -->
+                            {{ baseUrl }}/filePreview.html?url=文件URL<br><br>
+                            <!-- 包含隐藏sheet -->
+                            {{ baseUrl }}/filePreview.html?url=文件URL&includeHiddenSheets=true
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded p-3">
+                            <p class="text-green-800 text-sm"><strong>✅ 示例：</strong>如果您的Excel文件包含隐藏的工作表，可以通过添加参数来查看它们。即使不包含隐藏工作表，API也会返回 <code class="bg-green-100 px-1 py-0.5 rounded">hasHiddenSheets: false</code> 和 <code class="bg-green-100 px-1 py-0.5 rounded">hiddenSheetNames: []</code> 字段。</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -349,6 +400,25 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900 mb-3">文件预览接口</h3>
                         <p class="text-gray-600 mb-2"><code class="bg-gray-100 px-2 py-1 rounded">GET {{ baseUrl }}/api/filePreview/preview?url=文件URL</code></p>
+                        <div class="mt-2 p-3 bg-gray-50 rounded">
+                            <p class="text-sm text-gray-700 mb-2"><strong>参数说明：</strong></p>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">url</code> (必填): 文件URL地址</li>
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">includeHiddenSheets</code> (可选): 是否包含隐藏的sheet，仅对Excel文件有效，默认为false</li>
+                            </ul>
+                            <p class="text-sm text-gray-700 mt-3 mb-2"><strong>Excel文件响应字段：</strong></p>
+                            <ul class="list-disc list-inside text-sm text-gray-600 space-y-1">
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">sheets</code>: 工作表数据对象</li>
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">sheetNames</code>: 返回的工作表名称列表</li>
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">sheetInfo</code>: 工作表详细信息（包含isHidden字段）</li>
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">hasHiddenSheets</code>: 是否存在隐藏的工作表</li>
+                                <li><code class="bg-gray-200 px-1 py-0.5 rounded">hiddenSheetNames</code>: 隐藏的工作表名称列表</li>
+                            </ul>
+                            <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                                <p class="text-blue-800"><strong>示例：</strong></p>
+                                <code class="text-blue-900">{{ baseUrl }}/api/filePreview/preview?url=文件URL&includeHiddenSheets=true</code>
+                            </div>
+                        </div>
                     </div>
                     
                     <div>

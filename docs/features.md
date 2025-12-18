@@ -5,6 +5,10 @@
 ### 📄 文件预览
 - **PDF文件**: 在线预览，支持缩放、翻页
 - **Office文档**: Word、Excel、PowerPoint文档预览
+  - **Excel增强功能**: 
+    - 支持检测隐藏的工作表
+    - 可通过参数控制是否返回隐藏工作表内容
+    - 自动识别工作表可见性状态
 - **图片文件**: JPG、PNG、GIF等格式预览
 - **文本文件**: TXT、MD、XML、CSV等格式预览
 - **代码文件**: 语法高亮显示
@@ -83,7 +87,30 @@
 | 图片 | .jpg, .jpeg, .png, .gif | 直接显示 |
 | 文本 | .txt, .md, .xml, .csv | 语法高亮 |
 
+## Excel文件预览增强
+
+### 隐藏工作表支持
+- **自动检测**: 系统会自动检测Excel文件中的隐藏工作表
+- **灵活控制**: 通过 `includeHiddenSheets` 参数控制是否返回隐藏工作表内容
+- **状态标识**: 响应中包含 `hasHiddenSheets` 和 `hiddenSheetNames` 字段，方便客户端判断
+- **详细信息**: 每个工作表的信息中包含 `isHidden` 字段，标识工作表是否隐藏
+
+### 使用示例
+```javascript
+// 默认不包含隐藏sheet
+GET /api/filePreview/preview?url=https://example.com/file.xlsx
+
+// 包含隐藏sheet
+GET /api/filePreview/preview?url=https://example.com/file.xlsx&includeHiddenSheets=true
+```
+
 ## 更新日志
+
+### v1.2.0
+- ✨ Excel文件支持隐藏sheet检测
+- ✨ 新增 `includeHiddenSheets` 参数，支持返回隐藏sheet内容
+- 🔧 优化Excel文件处理逻辑
+- 📚 更新API文档，添加Excel预览详细说明
 
 ### v1.1.0
 - ✨ 添加通用表格识别功能

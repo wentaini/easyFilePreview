@@ -46,16 +46,80 @@ node index.js
 
 ### 文件预览API
 
-#### GET /api/filePreview
+#### GET /api/filePreview/preview
 获取文件预览信息
 
 **参数:**
-- `url`: 文件URL地址
+- `url`: 文件URL地址（必填）
+- `includeHiddenSheets`: 是否包含隐藏的sheet（仅对Excel文件有效，可选，默认为false）
 
 **示例:**
 ```bash
-GET /api/filePreview?url=https://example.com/document.pdf
+# 基本预览
+GET /api/filePreview/preview?url=https://example.com/document.pdf
+
+# Excel文件预览（包含隐藏sheet）
+GET /api/filePreview/preview?url=https://example.com/document.xlsx&includeHiddenSheets=true
 ```
+
+**响应格式:**
+```json
+{
+  "success": true,
+  "message": "文件预览成功",
+  "data": {
+    "fileInfo": {
+      "url": "文件URL",
+      "extension": "文件扩展名",
+      "contentType": "MIME类型",
+      "fileName": "文件名",
+      "isSupported": true
+    },
+    "preview": {
+      "type": "文件类型（excel/pdf/doc等）",
+      "sheets": {},
+      "sheetNames": [],
+      "sheetInfo": {},
+      "images": {},
+      "hasHiddenSheets": false,
+      "hiddenSheetNames": []
+    }
+  }
+}
+```
+
+**Excel文件预览响应说明:**
+
+当文件类型为Excel（.xls, .xlsx）时，响应包含以下字段：
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| type | string | 固定为 "excel" |
+| sheets | object | 工作表数据对象，key为工作表名称，value为二维数组 |
+| sheetNames | array | 返回的工作表名称列表（默认不包含隐藏的sheet） |
+| sheetInfo | object | 工作表信息，包含每个工作表的行数、列数、图片数量等 |
+| images | object | 工作表图片对象，key为工作表名称，value为图片数组 |
+| hasHiddenSheets | boolean | 是否存在隐藏的工作表 |
+| hiddenSheetNames | array | 隐藏的工作表名称列表 |
+
+**sheetInfo 字段说明:**
+```json
+{
+  "工作表名称": {
+    "maxRow": 36,
+    "maxCol": 18,
+    "dataLength": 36,
+    "imageCount": 0,
+    "isHidden": false
+  }
+}
+```
+
+**includeHiddenSheets 参数说明:**
+- 默认值: `false`
+- 当设置为 `true` 时，返回结果中的 `sheets` 对象将包含所有工作表（包括隐藏的工作表）
+- 隐藏的工作表信息会在 `sheetInfo` 中标记 `isHidden: true`
+- 即使 `includeHiddenSheets=false`，响应中仍会包含 `hasHiddenSheets` 和 `hiddenSheetNames` 字段，用于告知客户端是否存在隐藏的工作表
 
 ### PDF文本提取API
 
@@ -217,12 +281,51 @@ MAX_FILE_SIZE=52428800
 ### 基本预览
 ```javascript
 // 获取文件预览信息
-const response = await fetch('/api/filePreview?url=https://example.com/document.pdf');
+const response = await fetch('/api/filePreview/preview?url=https://example.com/document.pdf');
 const data = await response.json();
 
 if (data.success) {
-    console.log('预览URL:', data.data.previewUrl);
-    console.log('文件类型:', data.data.type);
+    console.log('文件类型:', data.data.preview.type);
+    console.log('文件信息:', data.data.fileInfo);
+}
+```
+
+### Excel文件预览
+```javascript
+// 预览Excel文件（不包含隐藏sheet）
+const response = await fetch('/api/filePreview/preview?url=https://example.com/document.xlsx');
+const data = await response.json();
+
+if (data.success && data.data.preview.type === 'excel') {
+    const preview = data.data.preview;
+    console.log('工作表列表:', preview.sheetNames);
+    console.log('是否存在隐藏sheet:', preview.hasHiddenSheets);
+    console.log('隐藏的sheet名称:', preview.hiddenSheetNames);
+    
+    // 访问工作表数据
+    preview.sheetNames.forEach(sheetName => {
+        const sheetData = preview.sheets[sheetName];
+        console.log(`${sheetName} 数据:`, sheetData);
+    });
+}
+
+// 预览Excel文件（包含隐藏sheet）
+const responseWithHidden = await fetch(
+    '/api/filePreview/preview?url=https://example.com/document.xlsx&includeHiddenSheets=true'
+);
+const dataWithHidden = await responseWithHidden.json();
+
+if (dataWithHidden.success && dataWithHidden.data.preview.type === 'excel') {
+    const preview = dataWithHidden.data.preview;
+    // 现在 sheets 对象包含所有工作表，包括隐藏的
+    console.log('所有工作表（包括隐藏的）:', Object.keys(preview.sheets));
+    
+    // 检查哪些是隐藏的
+    Object.keys(preview.sheetInfo).forEach(sheetName => {
+        if (preview.sheetInfo[sheetName].isHidden) {
+            console.log(`隐藏的工作表: ${sheetName}`);
+        }
+    });
 }
 ```
 
@@ -304,6 +407,12 @@ npm run lint
 MIT License
 
 ## 更新日志
+
+### v1.2.0
+- ✨ Excel文件支持隐藏sheet检测
+- ✨ 新增 `includeHiddenSheets` 参数，支持返回隐藏sheet内容
+- 🔧 优化Excel文件处理逻辑
+- 📚 更新API文档，添加Excel预览详细说明
 
 ### v1.1.0
 - ✨ 添加通用表格识别功能

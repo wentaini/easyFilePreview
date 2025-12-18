@@ -966,10 +966,13 @@ class FilePreview {
     /**
      * 预览Excel文件
      * @param {Buffer} buffer 文件内容
+     * @param {Object} options 选项参数
+     * @param {boolean} options.includeHiddenSheets 是否包含隐藏的sheet，默认为false
      * @returns {Object} 预览信息
      */
-    async previewExcel(buffer) {
+    async previewExcel(buffer, options = {}) {
         try {
+            const { includeHiddenSheets = false } = options;
             const workbook = XLSX.read(buffer, { type: 'buffer' });
             const sheets = {};
             const sheetInfo = {};
@@ -979,7 +982,55 @@ class FilePreview {
             const imageExtractor = new ExcelImageExtractor();
             const extractedImages = await imageExtractor.extractImages(buffer);
             
-            workbook.SheetNames.forEach(sheetName => {
+            // 获取所有sheet的隐藏状态
+            const sheetVisibility = {};
+            console.log('🔍 [DEBUG] 检查workbook结构:', {
+                hasWorkbook: !!workbook.Workbook,
+                hasSheets: !!(workbook.Workbook && workbook.Workbook.Sheets),
+                sheetNames: workbook.SheetNames,
+                includeHiddenSheets: includeHiddenSheets
+            });
+            
+            if (workbook.Workbook && workbook.Workbook.Sheets) {
+                workbook.SheetNames.forEach((sheetName, index) => {
+                    const sheetMeta = workbook.Workbook.Sheets[index];
+                    // Hidden: 0 = 可见, 1 = 隐藏, 2 = 非常隐藏
+                    const hiddenState = sheetMeta?.Hidden || 0;
+                    const isHidden = hiddenState === 1 || hiddenState === 2;
+                    sheetVisibility[sheetName] = {
+                        isHidden: isHidden,
+                        hiddenState: hiddenState
+                    };
+                    console.log(`🔍 [DEBUG] Sheet "${sheetName}": hiddenState=${hiddenState}, isHidden=${isHidden}`);
+                });
+            } else {
+                // 如果没有Workbook.Sheets信息，所有sheet默认可见
+                console.log('🔍 [DEBUG] 未找到Workbook.Sheets，所有sheet默认可见');
+                workbook.SheetNames.forEach(sheetName => {
+                    sheetVisibility[sheetName] = {
+                        isHidden: false,
+                        hiddenState: 0
+                    };
+                });
+            }
+            
+            // 过滤要处理的sheet列表
+            const visibleSheetNames = workbook.SheetNames.filter(sheetName => {
+                const visibility = sheetVisibility[sheetName];
+                // 如果没有隐藏状态信息，默认显示
+                if (!visibility) {
+                    console.log(`🔍 [DEBUG] Sheet "${sheetName}": 无可见性信息，默认显示`);
+                    return true;
+                }
+                // 如果includeHiddenSheets为true，返回所有sheet；否则只返回可见的sheet
+                const shouldInclude = includeHiddenSheets || !visibility.isHidden;
+                console.log(`🔍 [DEBUG] Sheet "${sheetName}": isHidden=${visibility.isHidden}, includeHiddenSheets=${includeHiddenSheets}, shouldInclude=${shouldInclude}`);
+                return shouldInclude;
+            });
+            
+            console.log('🔍 [DEBUG] 最终要处理的sheet列表:', visibleSheetNames);
+            
+            visibleSheetNames.forEach(sheetName => {
                 const worksheet = workbook.Sheets[sheetName];
                 
                 // 获取工作表范围
@@ -1052,17 +1103,23 @@ class FilePreview {
                     maxRow: maxRow + 1,
                     maxCol: maxCol + 1,
                     dataLength: data.length,
-                    imageCount: sheetImages.length
+                    imageCount: sheetImages.length,
+                    isHidden: sheetVisibility[sheetName]?.isHidden || false
                 };
             });
 
             return {
                 type: 'excel',
                 sheets: sheets,
-                sheetNames: workbook.SheetNames,
+                sheetNames: visibleSheetNames,
                 sheetInfo: sheetInfo,
                 images: images,
-                contentType: 'application/json'
+                contentType: 'application/json',
+                hasHiddenSheets: Object.values(sheetVisibility).some(v => v.isHidden),
+                hiddenSheetNames: workbook.SheetNames.filter(name => {
+                    const visibility = sheetVisibility[name];
+                    return visibility && visibility.isHidden;
+                })
             };
         } catch (error) {
             throw new Error(`解析Excel文件失败: ${error.message}`);
@@ -3044,11 +3101,14 @@ class FilePreview {
     /**
      * 预览文件
      * @param {string} url 文件URL
+     * @param {Object} options 选项参数
+     * @param {boolean} options.includeHiddenSheets 是否包含隐藏的sheet（仅对Excel文件有效），默认为false
      * @returns {Promise<Object>} 预览结果
      */
-    async previewFile(url) {
+    async previewFile(url, options = {}) {
         console.log('🔍 [DEBUG] previewFile 开始执行');
         console.log('🔍 [DEBUG] 输入URL:', url);
+        console.log('🔍 [DEBUG] 选项参数:', options);
         
         try {
             // 检查文件格式是否支持
@@ -3076,7 +3136,7 @@ class FilePreview {
                 case 'xls':
                 case 'xlsx':
                     console.log('🔍 [DEBUG] 处理Excel文件');
-                    return await this.previewExcel(buffer);
+                    return await this.previewExcel(buffer, options);
                 case 'csv':
                     console.log('🔍 [DEBUG] 处理CSV文件');
                     return await this.previewCsv(buffer);

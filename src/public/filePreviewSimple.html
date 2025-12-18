@@ -324,6 +324,7 @@
                 async loadFile() {
                     const urlParams = new URLSearchParams(window.location.search);
                     const url = urlParams.get('url');
+                    const includeHiddenSheets = urlParams.get('includeHiddenSheets');
                     
                     if (!url) {
                         this.error = '未提供文件URL';
@@ -337,7 +338,12 @@
                     this.pdfError = false;
 
                     try {
-                        const response = await fetch(`/api/filePreview/preview?url=${encodeURIComponent(url)}`);
+                        // 构建API请求URL
+                        let apiUrl = `/api/filePreview/preview?url=${encodeURIComponent(url)}`;
+                        if (includeHiddenSheets) {
+                            apiUrl += `&includeHiddenSheets=${encodeURIComponent(includeHiddenSheets)}`;
+                        }
+                        const response = await fetch(apiUrl);
                         const result = await response.json();
 
                         if (result.success) {

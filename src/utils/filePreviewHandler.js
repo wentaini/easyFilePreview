@@ -100,9 +100,16 @@ async function filePreviewHandler(req, res) {
         const fileInfo = filePreview.getFileInfo(url);
         console.log('🔍 [DEBUG] 文件信息:', fileInfo);
         
+        // 获取选项参数
+        const includeHiddenSheets = req.query.includeHiddenSheets === 'true' || req.query.includeHiddenSheets === true;
+        const options = {
+            includeHiddenSheets: includeHiddenSheets
+        };
+        console.log('🔍 [DEBUG] 预览选项:', options);
+        
         // 预览文件
         console.log('🔍 [DEBUG] 开始预览文件');
-        const previewResult = await filePreview.previewFile(url);
+        const previewResult = await filePreview.previewFile(url, options);
         
         console.log('🔍 [DEBUG] 文件预览成功');
         logInfo(`文件预览成功: ${url}`, {
