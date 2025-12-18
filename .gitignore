@@ -154,4 +154,7 @@ public/uploads/
 sessions/
 
 # Test files
-test-results/ 
+test-results/
+
+# Build scripts
+build_prod.sh 
