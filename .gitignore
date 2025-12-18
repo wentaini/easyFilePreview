@@ -157,7 +157,4 @@ sessions/
 test-results/
 
 # Build scripts
-build_prod.sh 
-
-# Dockerfile
-Dockerfile
+build_prod.sh
