@@ -4,13 +4,6 @@ FROM public.ecr.aws/docker/library/node:18-alpine
 # 设置工作目录
 WORKDIR /app
 
-# 安装系统依赖
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/cache/apk/*
-
 # 复制package.json和package-lock.json（如果存在）
 COPY package*.json ./
 

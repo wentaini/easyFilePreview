@@ -303,7 +303,8 @@
                     previewData: null,
                     currentSheet: null,
                     pdfLoading: false,
-                    pdfError: false
+                    pdfError: false,
+                    pdfTimeoutId: null
                 }
             },
             computed: {
@@ -331,6 +332,12 @@
                         return;
                     }
 
+                    // 清除之前的PDF超时检测
+                    if (this.pdfTimeoutId) {
+                        clearTimeout(this.pdfTimeoutId);
+                        this.pdfTimeoutId = null;
+                    }
+                    
                     this.loading = true;
                     this.error = null;
                     this.previewData = null;
@@ -433,37 +440,81 @@
                     this.pdfLoading = false;
                     this.pdfError = false;
                     
-                    // 检查iframe是否真正加载了内容
+                    // 清除超时检测
+                    if (this.pdfTimeoutId) {
+                        clearTimeout(this.pdfTimeoutId);
+                        this.pdfTimeoutId = null;
+                    }
+                    
+                    // 检查iframe是否真正加载了内容（可选验证，不强制）
+                    // 注意：浏览器内置PDF查看器渲染时，iframe body可能为空，这是正常现象
                     setTimeout(() => {
                         const iframe = document.querySelector('.pdf-viewer');
                         if (iframe) {
                             try {
                                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                                if (!iframeDoc || iframeDoc.body.innerHTML.trim() === '') {
-                                    console.warn('⚠️  PDF iframe内容为空，可能加载失败');
-                                    this.pdfError = true;
+                                // 如果能访问到iframe内容，检查是否有明显的错误页面
+                                if (iframeDoc && iframeDoc.body) {
+                                    const bodyText = iframeDoc.body.innerText || iframeDoc.body.textContent || '';
+                                    const bodyHTML = iframeDoc.body.innerHTML || '';
+                                    
+                                    // 检查是否是错误页面（包含常见的错误关键词）
+                                    const errorKeywords = ['404', 'not found', 'error', '无法', '失败', '加载失败'];
+                                    const hasError = errorKeywords.some(keyword => 
+                                        bodyText.toLowerCase().includes(keyword.toLowerCase()) ||
+                                        bodyHTML.toLowerCase().includes(keyword.toLowerCase())
+                                    );
+                                    
+                                    if (hasError && bodyHTML.trim() !== '') {
+                                        // 明确是错误页面，才设置错误
+                                        console.warn('⚠️  PDF加载返回错误页面');
+                                        this.pdfError = true;
+                                    } else {
+                                        // 内容为空或正常，都认为加载成功（因为load事件已触发）
+                                        console.log('✅ PDF内容验证通过（load事件已触发）');
+                                    }
                                 }
                             } catch (e) {
-                                console.log('无法检查iframe内容（跨域限制）');
+                                // 跨域限制无法访问iframe内容，这是正常情况
+                                // 由于load事件已触发，说明PDF应该已经加载成功
+                                console.log('无法检查iframe内容（跨域限制），但load事件已触发，假设加载成功');
+                                // 不设置pdfError，因为跨域时无法检查不代表加载失败
                             }
                         }
                     }, 2000);
                 },
                 handlePdfError() {
+                    // 如果load事件已经触发，说明PDF可能已经加载成功，不设置错误
+                    // 因为某些情况下iframe可能会误触发error事件
+                    if (!this.pdfLoading) {
+                        console.log('⚠️  PDF error事件触发，但load事件已触发，忽略此错误');
+                        return;
+                    }
                     console.error('❌ PDF加载失败');
                     this.pdfLoading = false;
                     this.pdfError = true;
+                    
+                    // 清除超时检测
+                    if (this.pdfTimeoutId) {
+                        clearTimeout(this.pdfTimeoutId);
+                        this.pdfTimeoutId = null;
+                    }
                 },
                 // 添加超时检测
                 checkPdfTimeout() {
                     if (this.pdfLoading) {
-                        setTimeout(() => {
+                        // 清除之前的超时检测
+                        if (this.pdfTimeoutId) {
+                            clearTimeout(this.pdfTimeoutId);
+                        }
+                        this.pdfTimeoutId = setTimeout(() => {
                             if (this.pdfLoading) {
                                 console.warn('⚠️  PDF加载超时');
                                 this.pdfLoading = false;
                                 this.pdfError = true;
+                                this.pdfTimeoutId = null;
                             }
-                        }, 30000); // 30秒超时
+                        }, 120000); // 120秒超时
                     }
                 },
 
