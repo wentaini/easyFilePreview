@@ -968,11 +968,12 @@ class FilePreview {
      * @param {Buffer} buffer 文件内容
      * @param {Object} options 选项参数
      * @param {boolean} options.includeHiddenSheets 是否包含隐藏的sheet，默认为false
+     * @param {string} options.fileExtension 文件扩展名（xls/xlsx），用于兼容旧版xls
      * @returns {Object} 预览信息
      */
     async previewExcel(buffer, options = {}) {
         try {
-            const { includeHiddenSheets = false } = options;
+            const { includeHiddenSheets = false, fileExtension = 'xlsx' } = options;
             const workbook = XLSX.read(buffer, { type: 'buffer' });
             const sheets = {};
             const sheetInfo = {};
@@ -1122,8 +1123,90 @@ class FilePreview {
                 })
             };
         } catch (error) {
+            console.log('🔍 [DEBUG] Excel解析失败:', error.message);
+            
+            // 对旧版xls文件增加兼容处理，使用textract做降级解析
+            if (options.fileExtension && options.fileExtension.toLowerCase() === 'xls') {
+                try {
+                    console.log('🔍 [DEBUG] 尝试使用textract兼容解析XLS文件');
+                    return await this.previewLegacyXls(buffer);
+                } catch (fallbackError) {
+                    console.log('🔍 [DEBUG] textract兼容解析XLS失败:', fallbackError.message);
+                    // xlsx 和 textract 都解析失败时，统一返回可识别的业务错误文案
+                    throw new Error('该 Excel 文件格式过旧或不兼容，无法在线预览，请下载到本地用 Excel 打开查看。');
+                }
+            }
+
             throw new Error(`解析Excel文件失败: ${error.message}`);
         }
+    }
+
+    /**
+     * 使用textract对旧版XLS文件进行兼容解析
+     * 解析为简单二维表结构，保证至少可以正常预览
+     * @param {Buffer} buffer 文件内容
+     * @returns {Object} 预览信息
+     */
+    async previewLegacyXls(buffer) {
+        const textract = require('textract');
+
+        const text = await new Promise((resolve, reject) => {
+            textract.fromBufferWithMime('application/vnd.ms-excel', buffer, {
+                preserveLineBreaks: true,
+                preserveOnlyMultipleLineBreaks: true
+            }, (err, extractedText) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(extractedText || '');
+            });
+        });
+
+        if (!text || typeof text !== 'string' || text.trim().length === 0) {
+            throw new Error('textract未能提取任何文本内容');
+        }
+
+        // 将文本按行拆分，再按制表符或连续空格拆分为单元格，构造简单表格
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+        const data = [];
+        let maxCol = 0;
+
+        for (const line of lines) {
+            // 优先按制表符分列，其次按连续两个及以上空格分列
+            const cells = line.includes('\t')
+                ? line.split('\t')
+                : line.split(/\s{2,}/);
+
+            data.push(cells);
+            if (cells.length > maxCol) {
+                maxCol = cells.length;
+            }
+        }
+
+        const sheetName = 'Sheet1';
+        const sheets = {
+            [sheetName]: data
+        };
+        const sheetInfo = {
+            [sheetName]: {
+                maxRow: data.length,
+                maxCol: maxCol,
+                dataLength: data.length,
+                imageCount: 0,
+                isHidden: false
+            }
+        };
+
+        return {
+            type: 'excel',
+            sheets,
+            sheetNames: [sheetName],
+            sheetInfo,
+            images: { [sheetName]: [] },
+            contentType: 'application/json',
+            hasHiddenSheets: false,
+            hiddenSheetNames: []
+        };
     }
 
     /**
@@ -1299,11 +1382,9 @@ class FilePreview {
                     preserveOnlyMultipleLineBreaks: true
                 }, (error, text) => {
                     if (error) {
-                        console.log('🔍 [DEBUG] textract提取失败，尝试使用officeparser:', error.message);
-                        // 如果textract失败，尝试使用officeparser
-                        this.previewDocWithOfficeParser(buffer)
-                            .then(resolve)
-                            .catch(reject);
+                        console.log('🔍 [DEBUG] textract提取失败:', error.message);
+                        // mammoth 和 textract 都失败时，统一返回可识别的业务错误，避免officeparser导致进程崩溃
+                        return reject(new Error('该 Word 文件格式过旧或不兼容，无法在线预览，请下载到本地用 Word 打开查看。'));
                     } else {
                         console.log('🔍 [DEBUG] 原始提取的文本:', text);
                         console.log('🔍 [DEBUG] 文本长度:', text.length);
@@ -1334,11 +1415,13 @@ class FilePreview {
     async previewDocWithOfficeParser(buffer) {
         try {
             const officeParser = require('officeparser');
-            
-            const result = await officeParser.parseBuffer(buffer);
-            
-            if (result && result.text) {
-                const htmlContent = this.convertTextToHtml(result.text);
+
+            // 使用新版officeparser的parseOffice API
+            const ast = await officeParser.parseOffice(buffer);
+
+            if (ast && typeof ast.toText === 'function') {
+                const plainText = ast.toText();
+                const htmlContent = this.convertTextToHtml(plainText);
                 return {
                     type: 'word',
                     content: htmlContent,
@@ -1346,7 +1429,7 @@ class FilePreview {
                     contentType: 'text/html'
                 };
             } else {
-                throw new Error('无法提取文档内容');
+                throw new Error('无法从officeparser结果中获取文本内容');
             }
         } catch (error) {
             throw new Error(`officeparser解析失败: ${error.message}`);
@@ -3136,7 +3219,10 @@ class FilePreview {
                 case 'xls':
                 case 'xlsx':
                     console.log('🔍 [DEBUG] 处理Excel文件');
-                    return await this.previewExcel(buffer, options);
+                    return await this.previewExcel(buffer, { 
+                        ...options, 
+                        fileExtension: ext 
+                    });
                 case 'csv':
                     console.log('🔍 [DEBUG] 处理CSV文件');
                     return await this.previewCsv(buffer);

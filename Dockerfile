@@ -4,6 +4,11 @@ FROM public.ecr.aws/docker/library/node:18-alpine
 # 设置工作目录
 WORKDIR /app
 
+# 安装系统依赖（textract 解析 doc 需要 antiword 等工具）
+RUN apk add --no-cache \
+    antiword \
+    && rm -rf /var/cache/apk/*
+
 # 复制package.json和package-lock.json（如果存在）
 COPY package*.json ./
 

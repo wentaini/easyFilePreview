@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     python3 \
     make \
     g++ \
+    antiword \
     && rm -rf /var/cache/apk/*
 
 # 复制package.json和package-lock.json
